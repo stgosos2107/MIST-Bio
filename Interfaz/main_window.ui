@@ -6,26 +6,183 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>800</width>
+    <width>900</width>
     <height>600</height>
    </rect>
   </property>
   <property name="windowTitle">
-   <string>MainWindow</string>
+   <string>MIST-Bio</string>
   </property>
-  <widget class="QWidget" name="centralwidget"/>
-  <widget class="QMenuBar" name="menubar">
-   <property name="geometry">
-    <rect>
-     <x>0</x>
-     <y>0</y>
-     <width>800</width>
-     <height>26</height>
-    </rect>
-   </property>
+  <property name="styleSheet">
+   <string notr="true">QMainWindow#MainWindow {
+    border-image: url(:/img/fondo.png) 0 0 0 0 stretch stretch;
+    background-color: #03312E;
+}
+
+QWidget#centralwidget {
+    background-color: transparent;
+}
+
+QLabel {
+    color: #A8F9FF;
+    font-size: 10pt;
+}
+
+QLabel#main_title_label {
+    font-size: 18pt;
+    font-weight: bold;
+    color: #A8F9FF;
+}
+
+QLabel#main_subtitle_label {
+    font-size: 9pt;
+    color: #9AE5E6;
+}
+
+QPushButton#logout_button {
+    background-color: #037171;
+    color: #121619;
+    border-radius: 8px;
+    padding: 4px 14px;
+    font-weight: bold;
+    min-width: 110px;
+}
+
+QPushButton#logout_button:hover {
+    background-color: #9AE5E6;
+}
+
+QPushButton#logout_button:pressed {
+    background-color: #A8F9FF;
+}
+
+QTabWidget::pane {
+    border: 1px solid #037171;
+    background-color: rgba(3, 49, 46, 220);
+}
+
+QTabBar::tab {
+    background-color: #037171;
+    color: #121619;
+    padding: 6px 14px;
+    margin-right: 2px;
+    border-top-left-radius: 6px;
+    border-top-right-radius: 6px;
+}
+
+QTabBar::tab:selected {
+    background-color: #9AE5E6;
+    color: #121619;
+}
+
+QTabBar::tab:hover {
+    background-color: #A8F9FF;
+}
+
+QWidget#tab_images,
+QWidget#tab_signals,
+QWidget#tab_tabular {
+    background-color: rgba(3, 49, 46, 230);
+}
+
+QStatusBar {
+    background-color: #021616;
+    color: #A8F9FF;
+}
+</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <layout class="QVBoxLayout" name="verticalLayout">
+    <property name="spacing">
+     <number>10</number>
+    </property>
+    <property name="contentsMargins" stdset="0">
+     <rect>
+      <x>12</x>
+      <y>12</y>
+      <width>12</width>
+      <height>12</height>
+     </rect>
+    </property>
+    <item>
+     <layout class="QHBoxLayout" name="topLayout">
+      <property name="spacing">
+       <number>10</number>
+      </property>
+      <item>
+       <layout class="QVBoxLayout" name="titleLayout">
+        <item>
+         <widget class="QLabel" name="main_title_label">
+          <property name="text">
+           <string>MIST-Bio</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="main_subtitle_label">
+          <property name="text">
+           <string>Medical Images, Signal &amp; Tables for Bioengineering</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <spacer name="horizontalSpacer_top">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>40</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item>
+       <widget class="QPushButton" name="logout_button">
+        <property name="text">
+         <string>Cerrar sesión</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </item>
+    <item>
+     <widget class="QTabWidget" name="tab_widget">
+      <property name="currentIndex">
+       <number>0</number>
+      </property>
+      <widget class="QWidget" name="tab_images">
+       <attribute name="title">
+        <string>Imágenes</string>
+       </attribute>
+      </widget>
+      <widget class="QWidget" name="tab_signals">
+       <attribute name="title">
+        <string>Señales</string>
+       </attribute>
+      </widget>
+      <widget class="QWidget" name="tab_tabular">
+       <attribute name="title">
+        <string>Datos tabulares</string>
+       </attribute>
+      </widget>
+     </widget>
+    </item>
+   </layout>
   </widget>
-  <widget class="QStatusBar" name="statusbar"/>
+  <widget class="QStatusBar" name="status_bar"/>
  </widget>
- <resources/>
+ <resources>
+  <include location="recursos.qrc"/>
+ </resources>
  <connections/>
 </ui>
