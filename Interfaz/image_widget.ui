@@ -1,18 +1,174 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>Form</class>
- <widget class="QWidget" name="Form">
+ <class>ImageWidget</class>
+ <widget class="QWidget" name="ImageWidget">
   <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>400</width>
-    <height>300</height>
+    <width>900</width>
+    <height>520</height>
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Form</string>
+   <string>Imágenes</string>
   </property>
+  <property name="styleSheet">
+   <string notr="true">QWidget#ImageWidget {
+    border-image: url(:/img/fondo.png) 0 0 0 0 stretch stretch;
+    background-color: #03312E;
+}
+
+QLabel {
+    color: #A8F9FF;
+    font-size: 10pt;
+}
+
+QLabel#axial_label,
+QLabel#coronal_label,
+QLabel#sagittal_label {
+    background-color: rgba(3, 49, 46, 210);
+    border: 1px solid #037171;
+    border-radius: 6px;
+    min-width: 220px;
+    min-height: 220px;
+    qproperty-alignment: AlignCenter;
+}
+
+QSlider {
+    background: transparent;
+}
+
+QPushButton {
+    background-color: #037171;
+    color: #121619;
+    border-radius: 8px;
+    padding: 6px 18px;
+    font-weight: bold;
+    min-width: 120px;
+}
+
+QPushButton:hover {
+    background-color: #9AE5E6;
+}
+
+QPushButton:pressed {
+    background-color: #A8F9FF;
+}</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <property name="spacing">
+    <number>10</number>
+   </property>
+   <item>
+    <layout class="QHBoxLayout" name="imagesLayout">
+     <property name="spacing">
+      <number>10</number>
+     </property>
+     <item>
+      <layout class="QVBoxLayout" name="axialLayout">
+       <item>
+        <widget class="QLabel" name="axial_label">
+         <property name="text">
+          <string>Axial</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QSlider" name="axial_slider">
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </item>
+     <item>
+      <layout class="QVBoxLayout" name="coronalLayout">
+       <item>
+        <widget class="QLabel" name="coronal_label">
+         <property name="text">
+          <string>Coronal</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QSlider" name="coronal_slider">
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </item>
+     <item>
+      <layout class="QVBoxLayout" name="sagittalLayout">
+       <item>
+        <widget class="QLabel" name="sagittal_label">
+         <property name="text">
+          <string>Sagital</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QSlider" name="sagittal_slider">
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="buttonsLayout">
+     <property name="spacing">
+      <number>10</number>
+     </property>
+     <item>
+      <spacer name="horizontalSpacer_left">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+     <item>
+      <widget class="QPushButton" name="load_image">
+       <property name="text">
+        <string>Cargar imagen</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="filter_button">
+       <property name="text">
+        <string>Aplicar filtro</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <spacer name="horizontalSpacer_right">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+    </layout>
+   </item>
+  </layout>
  </widget>
  <resources/>
  <connections/>
