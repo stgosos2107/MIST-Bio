@@ -10,7 +10,7 @@ from PyQt5.QtWidgets import (
 )
 from PyQt5.QtGui import QPixmap, QImage
 from PyQt5.QtCore import Qt
-
+import Interfaz.recursos_rc
 import pandas as pd
 from matplotlib.figure import Figure
 
@@ -18,7 +18,7 @@ from matplotlib.figure import Figure
 class LoginWindow(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
-        uic.loadUi("login_window.ui", self)
+        uic.loadUi("Interfaz/login_window.ui", self)
         if hasattr(self, "error_label"):
             self.error_label.setText("")
             self.error_label.setVisible(False)
@@ -61,7 +61,7 @@ class LoginWindow(QDialog):
 class MainWindow(QMainWindow):
     def __init__(self, parent=None):
         super().__init__(parent)
-        uic.loadUi("main_window.ui", self)
+        uic.loadUi("Interfaz/main_window.ui", self)
 
     def set_tabs(self, image_widget, signal_widget, tabular_widget):
         self.tab_widget.clear()
@@ -79,7 +79,7 @@ class MainWindow(QMainWindow):
 class ImageWidget(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
-        uic.loadUi("image_widget.ui", self)
+        uic.loadUi("Interfaz/image_widget.ui", self)
 
     def display_slice(self, plane, pixmap):
         plane = plane.lower()
@@ -116,7 +116,7 @@ class ImageWidget(QWidget):
 class SignalWidget(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
-        uic.loadUi("signal_widget.ui", self)
+        uic.loadUi("Interfaz/signal_widget.ui", self)
 
     def populate_table(self, data):
         self.fft_table.clear()
@@ -166,7 +166,7 @@ class SignalWidget(QWidget):
 class TabularWidget(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
-        uic.loadUi("tabular_widget.ui", self)
+        uic.loadUi("Interfaz/tabular_widget.ui", self)
 
         self.plot_views = []
         for name in ("plot_view1", "plot_view2", "plot_view3", "plot_view4"):
