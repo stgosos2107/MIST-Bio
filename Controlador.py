@@ -114,9 +114,23 @@ class TabularController:
 
         return figs
 
+#La sexta clase es CameraController
+class CameraController:
+    def __init__(self, view, model):
+        self.view = view
+        self.model = model
+    
 
-
-
+#La vista captura la imagen y la envía aquí para procesarla.
+    def handle_capture(self):
+        image = self.view.capture_image()
+        if image is None:
+            return None
+        
+        processed = self.model.apply_filter("grayscale", image)
+        return processed
+        
+    
 
 
 
