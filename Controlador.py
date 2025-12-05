@@ -89,6 +89,34 @@ class SignalController:
         return self.model.calculate_std_dev("time")
     
 
+#La quinta clase es TabularController
+class TabularController:
+    def __init__(self, view, model):#view: TabularDataWidget, model: TabularDataProcessor
+        self.view = view
+        self.model = model
+
+#La vista llamara este metodo para cargar un archivo CSV.
+    def handle_load_csv(self):
+        file_path = self.view.get_selected_file()
+        if file_path:
+            self.model.load_csv(file_path)
+            return True
+        return False
+
+#La vista pasará la lista de columnas seleccionadas
+    def handle_plot_columns(self):
+        columns = self.view.get_selected_columns()
+        figs = []
+
+        for col in columns:
+            fig = self.model.get_column_plot(col)
+            figs.append((col, fig))
+
+        return figs
+
+
+
+
 
 
 
