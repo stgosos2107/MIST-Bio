@@ -63,6 +63,31 @@ class ImageController:
 # La vista pasará el plano para obtener el número máximo de slices. METODO ADICIONAL
     def get_max_slices(self, plane):
         return self.model.get_max_slices(plane)
+    
+
+#La cuarta clase es SignalController
+class SignalController:
+    def __init__(self, view, model): #view: SignalViewerWidget, model: SignalProcessor
+        self.view = view
+        self.model = model
+    
+# La vista llamará este metodo para cargar una señal.
+    def handle_load_signal(self):
+        file_path = self.view.get_selected_file()
+        if file_path:
+            self.model.load_signal(file_path)
+            return True
+        return False
+    
+# la vista pide un grafico espectral.
+    def handle_plot_spectrum(self):
+        channel = self.view.get_selected_channel()
+        return self.model.get_spectrum_plot(channel)
+
+#La vista pide la desviación estándar e histograma.
+    def handle_std_dev(self):
+        return self.model.calculate_std_dev("time")
+    
 
 
 
