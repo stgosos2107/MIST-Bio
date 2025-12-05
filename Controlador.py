@@ -8,10 +8,6 @@ class LoginController:
     def __init__(self, view, model):
         self.view = view
         self.model = model
-        self.connect_signals()
-
-    def connect_signals(self):
-        self.view.login_button.clicked.connect(self.handle_login)
 
 #La vista llamará este metodo pasando usuario y contraseña.
     def handle_login(self, username, password):
@@ -27,25 +23,50 @@ class MainController:
     def __init__(self, view, models: dict):# view:MainWindow, models: dict
         self.view = view
         self.models = models
-        self.connect_signals()
 
-    
-    def connect_signals(self):
-        self.view.logout_button.clicked.connect(self.handle_logout)
-
+# La vista llamará este metodo para cerrar sesión y retornar datos para registrar.
     def handle_logout(self):
         session = self.models["session"]
-        session_data = session.end_session()
+        info = session.end_session()
+        return info
 
-        logger = self.models["logger"]
-        logger.log_activity(session_data["user"], "logout", "-")
-
-        self.view.close()
-
-    def log_activity(self, action: str, result_path: str):
+# La vista llamará este metodo para registrar actividad del usuario.
+    def log_activity(self, action, path):
         user = self.models["session"].get_user()
         logger = self.models["logger"]
-        logger.log_activity(user, action, result_path)
+        logger.log_activity(user, action, path)
+
+
+
+#La tercer clase es ImageController
+class ImageController:
+    def __init__(self, view, model):#view: ImageViewerWidget, model: ImageProcessor
+        self.view = view
+        self.model = model
+
+# La vista llamará este metodo para cargar una imagen.
+    def handle_load_image(self):
+        file_path = self.view.get_selected_file()
+        if file_path:
+            self.model.load_image(file_path)
+            return True
+        return False
+    
+#La vista pasará el plano e índice.
+    def handle_slider_change(self, plane, value):
+        return self.model.get_slice(plane, value)
+    
+# La vista llamará este metodo para aplicar un filtro.
+    def handle_process(self):
+        return self.model.apply_filter("default")
+
+# La vista pasará el plano para obtener el número máximo de slices. METODO ADICIONAL
+    def get_max_slices(self, plane):
+        return self.model.get_max_slices(plane)
+
+
+
+
 
 
 
