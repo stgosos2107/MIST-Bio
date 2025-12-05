@@ -1,58 +1,24 @@
-#Creación de las clases que harán parte del controlador
+#Este archivo .py contiene la lógica del controlador para manejar las interacciones entre el modelo y 
+# la vista en nuestro aplicativo MIST-Bio.
+
+# En total tenemos 6 clases
+
 class LoginController:
     def __init__(self, view, model):
-        self.view = view          # LoginWindow
-        self.model = model        # AuthManager
+        self.view = view
+        self.model = model
 
-    def handle_login(self):
-        pass
+#La vista llamará este metodo pasando usuario y contraseña.
+    def handle_login(self, username, password):
 
-    def connect_signals(self):
-        pass
-
-
-
-class MainController:
-    def __init__(self, view, session, controllers: dict):
-        self.view = view              # MainWindow
-        self.session = session        # UserSession
-        self.controllers = controllers  # dict[str, Controller]
-
-    def handle_logout(self):
-        pass
-
-    def log_activity(self, action: str):
-        pass
+        if self.model.verify_credentials(username, password):
+            return True
+        return False
+    
+    def connect_signals(self): #TENGO DUDA SI ESTO VA AQUI O EN LA VISTA
+        self.view.login_button.clicked.connect(self.on_login_clicked)
 
 
 
-class ImageController:
-    def __init__(self, view, model):
-        self.view = view              # ImageViewerWidget
-        self.model = model            # ImageProcessor
-
-    def handle_load_image(self):
-        pass
-
-    def handle_slider_change(self, plane: str, value: int):
-        pass
-
-    def handle_apply_filter(self):
-        pass
 
 
-
-class SignalController:
-    def __init__(self):
-        self.attribute1 = None   # defaultValue
-        self.attribute2 = None
-        self.attribute3 = None
-
-    def operation1(self, params):
-        pass
-
-    def operation2(self, params):
-        pass
-
-    def operation3(self):
-        pass
