@@ -1,16 +1,43 @@
-numpy pandas scipy matplotlib opencv-python pydicom nibabel lxml pymongo
-PyQt5
+import os
+import io
+import datetime
+import tempfile
 import numpy as np
 import pandas as pd
 from scipy.io import loadmat
 from scipy.fft import rfft, rfftfreq
 import matplotlib.pyplot as plt
-import os
+from typing import Dict, Optional, List, Tuple, Any
+import sqlite3
 try:
     from PyQt5.QtGui import QStandardItemModel, QStandardItem
     HAVE_PYQT = True
 except Exception:
-    HAVE_PYQT = False 
+    HAVE_PYQT = False
+try:
+    import cv2
+    HAVE_CV2 = True
+except Exception:
+    HAVE_CV2 = False
+
+try:
+    import pydicom
+    from pydicom.filereader import dcmread
+    HAVE_PYDICOM = True
+except Exception:
+    HAVE_PYDICOM = False
+
+try:
+    import nibabel as nib
+    HAVE_NIBABEL = True
+except Exception:
+    HAVE_NIBABEL = False
+
+try:
+    from pymongo import MongoClient
+    HAVE_PYMONGO = True
+except Exception:
+    HAVE_PYMONGO = False
     
 class SignalProcessor:
     def __init__(self):
