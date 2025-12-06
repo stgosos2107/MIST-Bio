@@ -67,43 +67,67 @@ class ImageController:
 
 #La cuarta clase es SignalController
 class SignalController:
-    def __init__(self, view, model): #view: SignalViewerWidget, model: SignalProcessor
+    def __init__(self, view, model):  # view: SignalWidget, model: SignalProcessor
         self.view = view
         self.model = model
     
-# La vista llamará este metodo para cargar una señal.
+    # La vista llamará este método para cargar una señal.
     def handle_load_signal(self):
         file_path = self.view.get_selected_file()
-        if file_path:
-            self.model.load_signal(file_path)
-            return True
-        return False
-    
-# la vista pide un grafico espectral.
-    def handle_plot_spectrum(self):
-        channel = self.view.get_selected_channel()
-        return self.model.get_spectrum_plot(channel)
+        if not file_path:
+            return False
 
-#La vista pide la desviación estándar e histograma.
-    def handle_std_dev(self):
-        return self.model.calculate_std_dev("time")
+        # Cargamos el archivo .mat con las señales
+        self.model.load_mat_file(file_path)
+        self.model.compute_fft_all_channels()
+
+        # Llenar la tabla con los resultados de la FFT
+        df = self.model.get_fft_dataframe()
+        self.view.populate_table(df)
+
+        # Llenar el combo de canales disponibles
+        self.view.channel_combo.clear()
+        channels = sorted(self.model.signal_data.keys())
+        for ch in channels:
+            self.view.channel_combo.addItem(str(ch))
+
+        return True
     
+    # La vista pide un gráfico espectral.
+    def handle_plot_spectrum(self):
+        channel_index = self.view.get_selected_channel_index()
+        fig = self.model.get_spectrum_plot(channel_index)
+        return fig
+
+    # La vista pide la desviación estándar y el histograma.
+    def handle_std_dev(self):
+        std_value, fig = self.model.calculate_std_and_histogram(axis="global")
+        return std_value, fig
+
 
 #La quinta clase es TabularController
 class TabularController:
-    def __init__(self, view, model):#view: TabularDataWidget, model: TabularDataProcessor
+    def __init__(self, view, model):  # view: TabularWidget, model: TabularProcessor
         self.view = view
         self.model = model
 
-#La vista llamara este metodo para cargar un archivo CSV.
+    # La vista llamará este método para cargar un archivo CSV.
     def handle_load_csv(self):
         file_path = self.view.get_selected_file()
-        if file_path:
-            self.model.load_csv(file_path)
-            return True
-        return False
+        if not file_path:
+            return False
 
-#La vista pasará la lista de columnas seleccionadas
+        self.model.load_csv(file_path)
+
+        qt_model = self.model.get_data_model()
+        columns = self.model.get_columns()
+
+        self.view.load_data_model(qt_model)
+        self.view.set_column_names(columns)
+
+        return True
+
+    # La vista pasará la lista de columnas seleccionadas
     def handle_plot_columns(self):
         columns = self.view.get_selected_columns()
         figs = []
@@ -113,6 +137,7 @@ class TabularController:
             figs.append((col, fig))
 
         return figs
+
 
 #La sexta clase es CameraController
 class CameraController:
