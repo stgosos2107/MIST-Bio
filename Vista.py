@@ -9,10 +9,11 @@ from PyQt5.QtWidgets import (
     QGraphicsView,
 )
 from PyQt5.QtGui import QPixmap, QImage
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QTimer 
 import Interfaz.recursos_rc
 import pandas as pd
 from matplotlib.figure import Figure
+import cv2
 
 
 class LoginWindow(QDialog):
@@ -232,3 +233,69 @@ class TabularWidget(QWidget):
         scene = QGraphicsScene(self)
         scene.addPixmap(pixmap)
         return scene
+
+class CameraCaptureDialog(QDialog):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        uic.loadUi("Interfaz/camera_capture_dialog.ui", self)
+
+        self.video_capture = None
+        self.current_frame = None
+
+        self.timer = QTimer(self)
+        self.timer.timeout.connect(self.update_preview)
+
+        if hasattr(self, "capture_button"):
+            self.capture_button.clicked.connect(self.accept)
+        if hasattr(self, "cancel_button"):
+            self.cancel_button.clicked.connect(self.reject)
+
+    def update_preview(self):
+        if self.video_capture is None or not self.video_capture.isOpened():
+            return
+
+        ok, frame = self.video_capture.read()
+        if not ok:
+            return
+
+        self.current_frame = frame
+
+        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        h, w, ch = frame_rgb.shape
+        qimg = QImage(frame_rgb.data, w, h, w * ch, QImage.Format_RGB888)
+        pixmap = QPixmap.fromImage(qimg)
+
+        if hasattr(self, "preview_label"):
+            self.preview_label.setPixmap(
+                pixmap.scaled(
+                    self.preview_label.size(),
+                    Qt.KeepAspectRatio,
+                    Qt.SmoothTransformation,
+                )
+            )
+
+    def capture_image(self):
+        self.video_capture = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+        if not self.video_capture.isOpened():
+            return None
+
+        self.current_frame = None
+        self.timer.start(30)
+
+        result = None
+        if self.exec_() == QDialog.Accepted and self.current_frame is not None:
+            result = self.current_frame.copy()
+
+        self._release_camera()
+        return result
+
+    def _release_camera(self):
+        if self.timer.isActive():
+            self.timer.stop()
+        if self.video_capture is not None and self.video_capture.isOpened():
+            self.video_capture.release()
+        self.video_capture = None
+
+    def closeEvent(self, event):
+        self._release_camera()
+        super().closeEvent(event)
