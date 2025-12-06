@@ -28,6 +28,9 @@ class LoginWindow(QDialog):
         password = self.password_input.text()
         return username, password
 
+    def get_credentials(self):
+        return self.get_login_data()
+
     def get_register_data(self):
         username = self.username_input.text().strip()
         password = self.password_input.text()
@@ -118,6 +121,21 @@ class SignalWidget(QWidget):
         super().__init__(parent)
         uic.loadUi("Interfaz/signal_widget.ui", self)
 
+    def get_selected_file(self):
+        filename, _ = QFileDialog.getOpenFileName(
+            self,
+            "Seleccionar señal",
+            "",
+            "Archivos de señal (*.csv *.txt *.mat);;Todos los archivos (*.*)",
+        )
+        return filename or ""
+
+    def get_selected_channel(self):
+        return self.channel_combo.currentText()
+
+    def get_selected_channel_index(self):
+        return self.channel_combo.currentIndex()
+
     def populate_table(self, data):
         self.fft_table.clear()
         self.fft_table.setRowCount(len(data.index))
@@ -159,9 +177,6 @@ class SignalWidget(QWidget):
         rect = scene.itemsBoundingRect()
         view.fitInView(rect, Qt.KeepAspectRatio)
 
-    def get_selected_channel_index(self):
-        return self.channel_combo.currentIndex()
-
 
 class TabularWidget(QWidget):
     def __init__(self, parent=None):
@@ -174,6 +189,15 @@ class TabularWidget(QWidget):
                 view = getattr(self, name)
                 if isinstance(view, QGraphicsView):
                     self.plot_views.append(view)
+
+    def get_selected_file(self):
+        filename, _ = QFileDialog.getOpenFileName(
+            self,
+            "Seleccionar archivo de datos",
+            "",
+            "Archivos CSV (*.csv);;Archivos Excel (*.xlsx *.xls);;Todos los archivos (*.*)",
+        )
+        return filename or ""
 
     def load_data_model(self, model):
         self.data_table.setModel(model)
