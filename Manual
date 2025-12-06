@@ -1,0 +1,93 @@
+# Manual de Usuario -- Aplicación MIST-Bio
+
+## 1. Introducción
+
+MIST-Bio es una aplicación desarrollada en Python con PyQt5 para el
+procesamiento de imágenes médicas, señales biomédicas y datos tabulares
+siguiendo la arquitectura Modelo--Vista--Controlador (MVC).
+
+## 2. Requisitos del Sistema
+
+-   Python 3.8+
+-   PyQt5
+-   NumPy, Pandas, Matplotlib
+-   SciPy
+-   OpenCV
+-   pydicom
+-   nibabel
+
+## 3. Inicio de Sesión
+
+Al ejecutar la aplicación aparece la ventana de Login.
+
+### Funciones:
+
+-   Iniciar sesión con usuario y contraseña.
+-   Registrarse como nuevo usuario.
+-   Captura de foto con cámara web durante el registro.
+-   Validación de campos y existencia del usuario.
+
+## 4. Ventana Principal
+
+Contiene tres pestañas:
+
+### 4.1 Imágenes
+
+-   Cargar imágenes (DICOM, NIfTI, PNG/JPG)
+-   Visualizar cortes Axial, Coronal y Sagital
+-   Aplicar filtros:
+    -   Gaussian
+    -   Canny
+    -   Equalización
+    -   Binarización
+-   Ajuste de cortes mediante sliders
+-   Generación automática de metadatos CSV
+
+### 4.2 Señales
+
+-   Cargar señales (.mat, .csv, .txt)
+-   Calcular FFT
+-   Tabla con magnitud y frecuencia dominante
+-   Graficar espectro
+-   Calcular desviación estándar y generar histograma
+
+### 4.3 Datos Tabulares
+
+-   Cargar archivos CSV/Excel
+-   Mostrar datos en tabla
+-   Listar columnas disponibles
+-   Graficar hasta 4 columnas simultáneamente
+
+## 5. Sesión del Usuario
+
+-   Registro de actividades mediante DatabaseLogger
+-   Carpeta temporal personalizada para cada usuario
+-   Al cerrar sesión se guarda:
+    -   Tiempo de inicio
+    -   Duración
+    -   Carpeta temporal
+    -   Hora de cierre
+
+## 6. Arquitectura del Main
+
+El archivo main.py: 1. Crea la aplicación Qt. 2. Carga modelos globales
+(AuthManager, DatabaseLogger). 3. Muestra la ventana de Login. 4. Si el
+usuario se autentica: - Crea UserSession - Crea MainWindow - Crea
+modelos: ImageProcessor, SignalProcessor, TabularProcessor - Crea
+vistas: ImageWidget, SignalWidget, TabularWidget - Crea controladores y
+asigna cada vista - Muestra las pestañas del sistema 5. Si no se
+autentica, cierra la aplicación.
+
+## 7. Estructura de Carpetas
+
+-   /Interfaz → archivos .ui
+-   /Modelo → clases del modelo
+-   /Controlador → clases del controlador
+-   /temp → archivos temporales del usuario
+-   /resultados → metadatos generados
+-   /config/users.xml → usuarios registrados
+
+## 8. Cerrar Sesión
+
+El botón de Logout: - Finaliza sesión - Registra actividad - Cierra la
+aplicación
