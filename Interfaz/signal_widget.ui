@@ -1,0 +1,178 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>SignalWidget</class>
+ <widget class="QWidget" name="SignalWidget">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>900</width>
+    <height>520</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Señales</string>
+  </property>
+  <property name="styleSheet">
+   <string notr="true">QWidget#SignalWidget {
+    border-image: url(:/img/fondo.png) 0 0 0 0 stretch stretch;
+    background-color: #03312E;
+}
+
+QLabel {
+    color: #A8F9FF;
+    font-size: 10pt;
+}
+
+QPushButton {
+    background-color: #037171;
+    color: #121619;
+    border-radius: 8px;
+    padding: 6px 16px;
+    font-weight: bold;
+    min-width: 120px;
+}
+
+QPushButton:hover {
+    background-color: #9AE5E6;
+}
+
+QPushButton:pressed {
+    background-color: #A8F9FF;
+}
+
+QComboBox {
+    background-color: rgba(3, 49, 46, 230);
+    border: 1px solid #037171;
+    border-radius: 6px;
+    padding: 4px 8px;
+    color: #A8F9FF;
+}
+
+QTableWidget {
+    background-color: rgba(3, 49, 46, 230);
+    color: #A8F9FF;
+    gridline-color: #037171;
+    selection-background-color: #037171;
+    selection-color: #121619;
+    border: 1px solid #037171;
+    border-radius: 6px;
+}
+
+QHeaderView::section {
+    background-color: #037171;
+    color: #121619;
+    padding: 4px;
+    border: 1px solid #021616;
+}
+
+QGraphicsView {
+    background-color: rgba(3, 49, 46, 230);
+    border: 1px solid #037171;
+    border-radius: 6px;
+}</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <property name="spacing">
+    <number>10</number>
+   </property>
+   <item>
+    <layout class="QHBoxLayout" name="topLayout">
+     <property name="spacing">
+      <number>10</number>
+     </property>
+     <item>
+      <widget class="QPushButton" name="load_button">
+       <property name="text">
+        <string>Cargar señal</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLabel" name="channel_label">
+       <property name="text">
+        <string>Canal:</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QComboBox" name="channel_combo"/>
+     </item>
+     <item>
+      <spacer name="horizontalSpacer_top">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+     <item>
+      <widget class="QPushButton" name="plot_button">
+       <property name="text">
+        <string>Graficar</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="std_button">
+       <property name="text">
+        <string>Estadísticas</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="mainLayout">
+     <property name="spacing">
+      <number>10</number>
+     </property>
+     <item>
+      <widget class="QTableWidget" name="fft_table">
+       <property name="columnCount">
+        <number>0</number>
+       </property>
+       <property name="rowCount">
+        <number>0</number>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <layout class="QVBoxLayout" name="plotsLayout">
+       <property name="spacing">
+        <number>10</number>
+       </property>
+       <item>
+        <widget class="QLabel" name="hist_label">
+         <property name="text">
+          <string>Histograma</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QGraphicsView" name="histogram_view"/>
+       </item>
+       <item>
+        <widget class="QLabel" name="spec_label">
+         <property name="text">
+          <string>Espectro</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QGraphicsView" name="spectrum_view"/>
+       </item>
+      </layout>
+     </item>
+    </layout>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

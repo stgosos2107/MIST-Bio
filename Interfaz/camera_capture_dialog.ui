@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>CameraCaptureDialog</class>
+ <widget class="QDialog" name="CameraCaptureDialog">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>640</width>
+    <height>480</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Captura de imagen</string>
+  </property>
+  <property name="styleSheet">
+   <string notr="true">QDialog#CameraCaptureDialog {
+    background-color: #03312E;
+    border-image: url(:img/fondo.png) 0 0 0 0 stretch stretch;
+    color: #A8F9FF;
+    font-family: &quot;Segoe UI&quot;;
+}
+
+QLabel {
+    color: #A8F9FF;
+    background: transparent;
+    font-size: 11pt;
+}
+
+QLabel#preview_label {
+    background-color: rgba(18, 22, 25, 180);
+    border: 2px solid #037171;
+    border-radius: 10px;
+    font-size: 10pt;
+}
+
+QPushButton {
+    background-color: #037171;
+    color: #A8F9FF;
+    border-radius: 10px;
+    padding: 6px 18px;
+    border: 1px solid #9AE5E6;
+}
+
+QPushButton:hover {
+    background-color: #05908C;
+}
+
+QPushButton:pressed {
+    background-color: #021C1A;
+}
+</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
+    <widget class="QLabel" name="title_label">
+     <property name="text">
+      <string>Captura de imagen de perfil</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignCenter</set>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QLabel" name="preview_label">
+     <property name="minimumSize">
+      <size>
+       <width>600</width>
+       <height>350</height>
+      </size>
+     </property>
+     <property name="frameShape">
+      <enum>QFrame::Box</enum>
+     </property>
+     <property name="text">
+      <string>Previsualización de la cámara</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignCenter</set>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="button_layout">
+     <item>
+      <spacer name="horizontalSpacer_left">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+     <item>
+      <widget class="QPushButton" name="capture_button">
+       <property name="minimumSize">
+        <size>
+         <width>120</width>
+         <height>30</height>
+        </size>
+       </property>
+       <property name="text">
+        <string>Capturar</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="cancel_button">
+       <property name="minimumSize">
+        <size>
+         <width>120</width>
+         <height>30</height>
+        </size>
+       </property>
+       <property name="text">
+        <string>Cancelar</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <spacer name="horizontalSpacer_right">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+    </layout>
+   </item>
+  </layout>
+ </widget>
+ <resources>
+  <include location="recursos.qrc"/>
+ </resources>
+ <connections/>
+</ui>
