@@ -3,18 +3,22 @@
 
 # En total tenemos 6 clases
 
-#La primer clase es LoginController
+# La primera clase es LoginController
 class LoginController:
     def __init__(self, view, model):
         self.view = view
         self.model = model
 
-#La vista llamará este metodo pasando usuario y contraseña.
+    # La vista llamará este método pasando usuario y contraseña.
     def handle_login(self, username, password):
-
         if self.model.verify_credentials(username, password):
             return True
         return False
+
+    # Este método recibe usuario y contraseña de la vista y le pide al modelo que registre.
+    def handle_register(self, username, password):
+        return self.model.register_user(username, password)
+
     
     
 
