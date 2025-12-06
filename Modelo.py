@@ -1,3 +1,6 @@
+#Este .py contiene las clases del modelo para manejar datos y lógica del aplicativo MIST-Bio.
+
+#Importaciones necesarias 
 import os
 import xml.etree.ElementTree as ET
 from datetime import datetime
@@ -44,12 +47,16 @@ except Exception:
     HAVE_PYMONGO = False
 
 
+#CLASES DEL MODELO
+
+#Esta primer clase se encarga del login y registro de usuarios
 class AuthManager:
     def __init__(self, xml_path: str = "config/users.xml"):
         self.xml_path = xml_path
         self.users: Dict[str, str] = {}
         self._cargar_usuarios()
 
+#metodo privado para cargar usuarios desde el XML
     def _cargar_usuarios(self):
         if not os.path.exists(self.xml_path):
             os.makedirs("config", exist_ok=True)
@@ -69,10 +76,12 @@ class AuthManager:
         except Exception:
             self.users["admin"] = "1234"
 
-    def verify_credentials(self, username: str, password: str) -> bool:
+#método para verificar credenciales
+    def verify_credentials(self, username, password):
         return self.users.get(username) == password
 
-    def register_user(self, username: str, password: str) -> bool:
+#método para registrar un nuevo usuario
+    def register_user(self, username, password):
         username = (username or "").strip()
         if not username or not password:
             return False
@@ -96,24 +105,28 @@ class AuthManager:
         return True
 
 
+#Esta segunda clase gestiona la sesión del usuario
 class UserSession:
-    def __init__(self, username: str):
+    def __init__(self, username):
         self.username = username
         self.login_time = datetime.now()
         self.temp_folder = self.create_temp_folder()
 
-    def create_temp_folder(self) -> str:
+#Este método crea y retorna la ruta donde se guardarán archivos temporales del usuario
+    def create_temp_folder(self):
         folder_path = os.path.join("temp", self.username)
         os.makedirs(folder_path, exist_ok=True)
         return folder_path
 
-    def get_username(self) -> str:
+#método que consigue el nombre del usuario
+    def get_username(self):
         return self.username
 
-    
-    def get_user(self) -> str:
+#método que consigue el nombre del usuario
+    def get_user(self):
         return self.username
 
+#método que genera un reporte completo de la sesión del usuario.
     def get_user_info(self) -> Dict[str, Any]:
         duracion = datetime.now() - self.login_time
         info = {
@@ -125,14 +138,16 @@ class UserSession:
         }
         return info
 
-    # Para MainController.handle_logout
+# Este método devuelve los datos finales de la sesión para que el MainController registre esa actividad.
     def end_session(self) -> Dict[str, Any]:
         return self.get_user_info()
 
-    def get_temp_path(self, filename: str) -> str:
+#el ultimo método de esta clase sirve para guardar o recuperar archivos temporales dentro de la carpeta del usuario.
+    def get_temp_path(self, filename):
         return os.path.join(self.temp_folder, filename)
 
 
+#La tercer clase se encarga de procesar imágenes médicas
 class ImageProcessor:
     def __init__(self):
         self.volume: Optional[np.ndarray] = None
@@ -142,16 +157,9 @@ class ImageProcessor:
         # (row_spacing, col_spacing, slice_thickness)
         self.spacing: Tuple[float, float, float] = (1.0, 1.0, 1.0)
 
-    # -------------------- CARGA DE IMÁGENES --------------------
 
-    def load_image(self, path: str) -> bool:
-        """
-        Carga:
-        - Una serie DICOM desde una CARPETA (lo que tú quieres para la serie),
-        - Un archivo DICOM individual,
-        - Un NIfTI (.nii / .nii.gz),
-        - O una imagen 2D (png/jpg...).
-        """
+#método que identifica el tipo de imagen y la carga correctamente
+    def load_image(self, path):
         self.volume = None
         self.metadata = {}
         self.current_file = path
@@ -160,7 +168,7 @@ class ImageProcessor:
 
         try:
             if os.path.isdir(path):
-                # Carpeta con una serie DICOM
+# Carpeta con una serie DICOM
                 return self._load_dicom_series(path)
 
             ext = os.path.splitext(path.lower())[1]
@@ -176,7 +184,9 @@ class ImageProcessor:
             print(f"[ImageProcessor] Error cargando imagen: {e}")
             return False
 
-    def _load_dicom_series(self, folder: str) -> bool:
+
+#método que construye un volumen 3D a partir de una carpeta con cortes DICOM.
+    def _load_dicom_series(self, folder):
         if not HAVE_PYDICOM:
             raise RuntimeError("pydicom no disponible.")
 
@@ -198,6 +208,7 @@ class ImageProcessor:
 
         if not datasets:
             raise RuntimeError("No se pudieron leer archivos DICOM.")
+
 
         def sort_key(ds):
             z = None
@@ -255,7 +266,8 @@ class ImageProcessor:
         self._save_metadata_csv()
         return True
 
-    def _load_single_dicom(self, path: str) -> bool:
+#Este método carga un archivo DICOM individual y extrae datos importantes.
+    def _load_single_dicom(self, path):
         if not HAVE_PYDICOM:
             raise RuntimeError("pydicom no disponible.")
 
@@ -296,7 +308,8 @@ class ImageProcessor:
         self._save_metadata_csv()
         return True
 
-    def _load_nifti(self, path: str) -> bool:
+#método que carga archivos NIfTI y su información relevante.
+    def _load_nifti(self, path):
         if not HAVE_NIBABEL:
             raise RuntimeError("nibabel no disponible.")
 
@@ -319,7 +332,8 @@ class ImageProcessor:
         self._save_metadata_csv()
         return True
 
-    def _load_2d_image(self, path: str) -> bool:
+#Carga imágenes comunes 2D como fotografías o radiografías en PNG/JPG
+    def _load_2d_image(self, path):
         if not HAVE_CV2:
             raise RuntimeError("OpenCV no disponible.")
         img = cv2.imread(path)
@@ -336,6 +350,7 @@ class ImageProcessor:
         self._save_metadata_csv()
         return True
 
+#metodo que crea automáticamente un archivo CSV con la información de la imagen cargada
     def _save_metadata_csv(self):
         if not self.metadata:
             return
@@ -345,9 +360,8 @@ class ImageProcessor:
         csv_path = os.path.join("resultados", f"metadata_{base}.csv")
         df.to_csv(csv_path, index=False)
 
-    # -------------------- OBTENER CORTES --------------------
-
-    def get_slice(self, plane: str, index: int) -> QPixmap:
+#Extrae un corte 2D desde un volumen 3D para mostrarlo en pantalla.
+    def get_slice(self, plane, index):
         if self.volume is None or not HAVE_PYQT:
             return QPixmap()
 
@@ -373,40 +387,40 @@ class ImageProcessor:
 
         arr = np.array(arr, dtype=np.float32)
 
-        # Ventana de intensidades
+# Ventana de intensidades
         lo = np.percentile(arr, 1)
         hi = np.percentile(arr, 99)
         arr = np.clip(arr, lo, hi)
         arr = (arr - arr.min()) / (arr.max() - arr.min() + 1e-8)
         img = (arr * 255).astype(np.uint8)
 
-        # Corrección de aspecto y orientación para coronal/sagittal 3D
+# Corrección de aspecto y orientación para coronal/sagittal 3D
         if self.file_type == "3d" and vol.ndim == 3 and plane in ("coronal", "sagittal"):
             row_sp, col_sp, slice_th = self.spacing
             row_sp = row_sp or 1.0
             col_sp = col_sp or 1.0
             slice_th = slice_th or 1.0
 
-            # Para coronal uso spacing de filas, para sagital el de columnas
+# Para coronal uso spacing de filas, para sagital el de columnas
             base_spacing = row_sp if plane == "coronal" else col_sp
 
-            # Factor físico: qué tanto más “gordo” debería ser el eje de los cortes
+# Factor físico: qué tanto más “gordo” debería ser el eje de los cortes
             phys_factor = slice_th / base_spacing if base_spacing > 0 else 1.0
-            # Lo usamos casi tal cual, solo limitado para que no se vuelva loco
+# Lo usamos casi tal cual, solo limitado para que no se vuelva loco
             factor = max(1.0, min(4.0, phys_factor))
 
-            # Ensanchar la imagen (hacerla menos aplastada)
+# Ensanchar la imagen (hacerla menos aplastada)
             if HAVE_CV2 and img.ndim == 2:
                 h, w = img.shape
                 new_w = max(1, int(round(w * factor)))
                 interp = cv2.INTER_CUBIC if new_w > w else cv2.INTER_AREA
                 img = cv2.resize(img, (new_w, h), interpolation=interp)
 
-            # Girar 90° (en el mismo sentido en que antes se veía bien)
+# Girar 90° (en el mismo sentido en que antes se veía bien)
             img = np.rot90(img, 1)
 
 
-        # Pasar a QImage/QPixmap
+# Pasar a QImage/QPixmap
         if img.ndim == 2:
             h, w = img.shape
             bytes_per_line = w
@@ -423,7 +437,8 @@ class ImageProcessor:
 
         return QPixmap.fromImage(qimg.copy())
 
-    def get_max_slices(self, plane: str) -> int:
+# método que informa cuántos cortes tiene cada plano para que la Vista configure los sliders.
+    def get_max_slices(self, plane):
         if self.volume is None or self.file_type == "2d" or self.volume.ndim != 3:
             return 0
         plane = plane.lower()
@@ -435,8 +450,7 @@ class ImageProcessor:
             return self.volume.shape[0] - 1
         return 0
 
-    # -------------------- FILTROS PARA LAS 3 VISTAS --------------------
-
+# método para filtra los 3 cortes (axial, coronal y sagital) al mismo tiempo.
     def apply_filter_to_slices(
         self,
         filter_type: str,
@@ -444,10 +458,7 @@ class ImageProcessor:
         coronal_index: int,
         sagittal_index: int,
     ):
-        """
-        Aplica un filtro a los 3 planos visibles (axial, coronal, sagital)
-        y devuelve 3 QPixmap filtrados.
-        """
+
         if self.volume is None or not HAVE_PYQT:
             return QPixmap(), QPixmap(), QPixmap()
 
@@ -502,13 +513,8 @@ class ImageProcessor:
 
         return pix_axial_f, pix_coronal_f, pix_sagittal_f
 
-    # -------------------- CÁMARA (se deja igual) --------------------
-
-    def apply_filter(self, filter_type: str, image_2d: Optional[np.ndarray] = None) -> QPixmap:
-        """
-        Versión usada por el módulo de cámara para aplicar un filtro
-        a una sola imagen 2D.
-        """
+#Filtro para imágenes 2D (cámara o fotos normales).
+    def apply_filter(self, filter_type, image_2d):
         if not HAVE_CV2 or not HAVE_PYQT:
             return QPixmap()
 
@@ -542,7 +548,8 @@ class ImageProcessor:
         qimg = QImage(gray.data, w, h, w, QImage.Format_Grayscale8)
         return QPixmap.fromImage(qimg.copy())
 
-    def convert_to_grayscale_and_save(self, frame: np.ndarray, session: UserSession) -> str:
+#Convierte una captura de cámara a gris y la guarda en la carpeta temporal del usuario.
+    def convert_to_grayscale_and_save(self, frame, session):
         if not HAVE_CV2:
             raise RuntimeError("OpenCV no disponible.")
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -551,13 +558,15 @@ class ImageProcessor:
         return path
 
 
+#La cuarta clase se encarga de procesar señales biomédicas
 class SignalProcessor:
     def __init__(self):
         self.signal_data: Dict[int, np.ndarray] = {}
         self.sampling_rate: Optional[float] = None
         self.fft_results: Optional[pd.DataFrame] = None
 
-    def load_mat_file(self, path: str, variable_name: Optional[str] = None) -> bool:
+#método para carga señales desde un .mat en formato consistente para analizarlas
+    def load_mat_file(self, path, variable_name):
         if not os.path.exists(path):
             raise FileNotFoundError(path)
         mat = loadmat(path)
@@ -597,6 +606,7 @@ class SignalProcessor:
             self.sampling_rate = sr
         return True
 
+#método que calcula la FFT para todas las señales cargadas
     def compute_fft_all_channels(self) -> pd.DataFrame:
         if not self.signal_data:
             raise RuntimeError("No hay señales cargadas.")
@@ -623,12 +633,14 @@ class SignalProcessor:
         self.fft_results = pd.DataFrame(rows)
         return self.fft_results
 
-    def get_fft_dataframe(self) -> pd.DataFrame:
+#permite obtener los resultados procesados por el método anterior
+    def get_fft_dataframe(self):
         if self.fft_results is None:
             raise RuntimeError("FFT no calculada aún.")
         return self.fft_results
 
-    def save_fft_csv(self, out_path: str) -> str:
+#método que xporta la FFT a un archivo legible para análisis externo
+    def save_fft_csv(self, out_path):
         if self.fft_results is None:
             raise RuntimeError("FFT no calculada.")
         df = self.fft_results.copy()
@@ -638,7 +650,8 @@ class SignalProcessor:
         df.to_csv(out_path, index=False)
         return out_path
 
-    def get_spectrum_plot(self, channel: int) -> plt.Figure:
+#método que crea una gráfica del espectro de un canal específico
+    def get_spectrum_plot(self, channel):
         if channel not in self.signal_data:
             raise IndexError("Canal no encontrado")
         sig = self.signal_data[channel]
@@ -657,6 +670,7 @@ class SignalProcessor:
         fig.tight_layout()
         return fig
 
+#Para calcular la variabilidad de la señal y generar histogramas según el tipo de análisis.
     def calculate_std_and_histogram(self, axis: str = "channel") -> Tuple[float, plt.Figure]:
         if not self.signal_data:
             raise RuntimeError("No hay señal cargada.")
@@ -681,23 +695,26 @@ class SignalProcessor:
         fig.tight_layout()
         return std_value, fig
 
-
+#La quinta clase se encarga de procesar datos tabulares
 class TabularProcessor:
     def __init__(self):
         self.data: Optional[pd.DataFrame] = None
 
+#Este primer método carga un CSV y deja los datos listos para trabajar
     def load_csv(self, file_path: str, **kwargs) -> pd.DataFrame:
         if not os.path.exists(file_path):
             raise FileNotFoundError(file_path)
         self.data = pd.read_csv(file_path, **kwargs)
         return self.data
 
-    def get_columns(self) -> List[str]:
+#método que sirve para poblar menús de selección de columnas, combos, filtros, etc
+    def get_columns(self):
         if self.data is None:
             return []
         return list(self.data.columns)
 
-    def get_column_plot(self, column: str) -> plt.Figure:
+#crea una gráfica simple para una columna del CSV
+    def get_column_plot(self, column):
         if self.data is None:
             raise RuntimeError("No hay datos cargados")
         if column not in self.data.columns:
@@ -710,6 +727,7 @@ class TabularProcessor:
         fig.tight_layout()
         return fig
 
+#este método prepara los datos tabulados para mostrarlos en una tabla de la interfaz
     def get_data_model(self):
         if not HAVE_PYQT:
             raise RuntimeError("PyQt5 no disponible para crear QStandardItemModel.")
@@ -728,8 +746,10 @@ class TabularProcessor:
         return model
 
 
+#La sexta clase se encarga de registrar la actividad del usuario en una base de datos
 class DatabaseLogger:
-    def __init__(self, db_type: str = "sqlite", credentials: Optional[Dict[str, Any]] = None):
+#este init prepara la conexión a BD dependiendo del tipo elegido
+    def __init__(self, db_type, credentials):
         self.db_type = db_type.lower()
         self.credentials = credentials or {}
         self.conn = None
@@ -749,22 +769,22 @@ class DatabaseLogger:
         else:
             raise ValueError("db_type debe ser 'sqlite' o 'mongo'")
 
-    def _ensure_table_sqlite(self):
-        cur = self.conn.cursor()
-        cur.execute(
-            """
-            CREATE TABLE IF NOT EXISTS activity (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                username TEXT,
-                action TEXT,
-                timestamp TEXT,
-                result_path TEXT
-            )
-        """
-        )
-        self.conn.commit()
+#método privado que crea la tabla en SQLite si no existe
+def _ensure_table_sqlite(self):
+    cur = self.conn.cursor()
+    cur.execute(
+        "CREATE TABLE IF NOT EXISTS activity ("
+        "id INTEGER PRIMARY KEY AUTOINCREMENT, "
+        "username TEXT, "
+        "action TEXT, "
+        "timestamp TEXT, "
+        "result_path TEXT"
+        ")"
+    )
+    self.conn.commit()
 
-    def log_activity(self, user: str, action: str, result_path: Optional[str] = None):
+#método que registra una acción del usuario en la base de datos
+    def log_activity(self, user, action, result_path):
         ts = datetime.now().isoformat()
         if self.db_type == "sqlite":
             cur = self.conn.cursor()
@@ -778,6 +798,7 @@ class DatabaseLogger:
             doc = {"username": user, "action": action, "timestamp": ts, "result_path": result_path or ""}
             self.collection.insert_one(doc)
 
+#método para cerrar conexiones abiertas
     def close(self):
         if self.conn:
             self.conn.close()
@@ -785,6 +806,7 @@ class DatabaseLogger:
             self.client.close()
 
 
+#Función auxiliar para guardar arrays como imágenes PNG
 def save_array_as_png(array: np.ndarray, out_path: str):
     if not HAVE_CV2:
         raise RuntimeError("OpenCV no disponible.")
