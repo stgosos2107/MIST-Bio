@@ -748,16 +748,20 @@ class TabularProcessor:
 
 #La sexta clase se encarga de registrar la actividad del usuario en una base de datos
 class DatabaseLogger:
-#este init prepara la conexión a BD dependiendo del tipo elegido
-    def __init__(self, db_type, credentials):
+    def __init__(self, db_type: str = "sqlite", credentials: Optional[Dict[str, Any]] = None):
+        # tipo de base de datos: "sqlite" o "mongo"
         self.db_type = db_type.lower()
+        # diccionario con la configuración (ruta del .db, URI de mongo, etc.)
         self.credentials = credentials or {}
         self.conn = None
         self.client = None
+
         if self.db_type == "sqlite":
+            # ruta del archivo de base de datos (por defecto pmda_activity.db)
             db_path = self.credentials.get("path", "pmda_activity.db")
             self.conn = sqlite3.connect(db_path, check_same_thread=False)
             self._ensure_table_sqlite()
+
         elif self.db_type == "mongo":
             if not HAVE_PYMONGO:
                 raise RuntimeError("pymongo no disponible para usar MongoDB.")
@@ -766,25 +770,26 @@ class DatabaseLogger:
             coll = self.credentials.get("collection", "activity")
             self.client = MongoClient(uri)
             self.collection = self.client[dbname][coll]
+
         else:
             raise ValueError("db_type debe ser 'sqlite' o 'mongo'")
 
-#método privado que crea la tabla en SQLite si no existe
-def _ensure_table_sqlite(self):
-    cur = self.conn.cursor()
-    cur.execute(
-        "CREATE TABLE IF NOT EXISTS activity ("
-        "id INTEGER PRIMARY KEY AUTOINCREMENT, "
-        "username TEXT, "
-        "action TEXT, "
-        "timestamp TEXT, "
-        "result_path TEXT"
-        ")"
-    )
-    self.conn.commit()
+    def _ensure_table_sqlite(self):
+        cur = self.conn.cursor()
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS activity (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT,
+                action TEXT,
+                timestamp TEXT,
+                result_path TEXT
+            )
+            """
+        )
+        self.conn.commit()
 
-#método que registra una acción del usuario en la base de datos
-    def log_activity(self, user, action, result_path):
+    def log_activity(self, user: str, action: str, result_path: Optional[str] = None):
         ts = datetime.now().isoformat()
         if self.db_type == "sqlite":
             cur = self.conn.cursor()
@@ -795,23 +800,16 @@ def _ensure_table_sqlite(self):
             )
             self.conn.commit()
         else:
-            doc = {"username": user, "action": action, "timestamp": ts, "result_path": result_path or ""}
+            doc = {
+                "username": user,
+                "action": action,
+                "timestamp": ts,
+                "result_path": result_path or "",
+            }
             self.collection.insert_one(doc)
 
-#método para cerrar conexiones abiertas
     def close(self):
         if self.conn:
             self.conn.close()
         if self.client:
             self.client.close()
-
-
-#Función auxiliar para guardar arrays como imágenes PNG
-def save_array_as_png(array: np.ndarray, out_path: str):
-    if not HAVE_CV2:
-        raise RuntimeError("OpenCV no disponible.")
-    arr = array.copy()
-    if arr.dtype != np.uint8:
-        arr = cv2.normalize(arr, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
-    os.makedirs(os.path.dirname(out_path) or ".", exist_ok=True)
-    cv2.imwrite(out_path, arr)
