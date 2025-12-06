@@ -41,33 +41,68 @@ class MainController:
         logger.log_activity(user, action, path)
 
 
-
-#La tercer clase es ImageController
 class ImageController:
-    def __init__(self, view, model):#view: ImageViewerWidget, model: ImageProcessor
+    def __init__(self, view, model):  
         self.view = view
         self.model = model
 
-# La vista llamará este metodo para cargar una imagen.
+        if hasattr(self.view, "set_controller"):
+            self.view.set_controller(self)
+
     def handle_load_image(self):
         file_path = self.view.get_selected_file()
-        if file_path:
-            self.model.load_image(file_path)
-            return True
-        return False
-    
-#La vista pasará el plano e índice.
+        if not file_path:
+            return False
+
+        ok = self.model.load_image(file_path)
+        if not ok:
+            return False
+
+        for plane, slider_attr in (
+            ("axial", "axial_slider"),
+            ("coronal", "coronal_slider"),
+            ("sagittal", "sagittal_slider"),
+        ):
+            max_val = self.model.get_max_slices(plane)
+            slider = getattr(self.view, slider_attr, None)
+            if slider is not None and max_val > 0:
+                slider.setMinimum(0)
+                slider.setMaximum(max_val)
+                slider.setValue(max_val // 2)
+
+                pix = self.model.get_slice(plane, slider.value())
+                self.view.display_slice(plane, pix)
+
+        return True
+
     def handle_slider_change(self, plane, value):
         return self.model.get_slice(plane, value)
-    
-# La vista llamará este metodo para aplicar un filtro.
-    def handle_process(self):
-        return self.model.apply_filter("default")
 
-# La vista pasará el plano para obtener el número máximo de slices. METODO ADICIONAL
+    def handle_process(self):
+        """
+        Aplica el filtro a las 3 vistas (axial, coronal y sagital)
+        usando los índices actuales de los sliders.
+        """
+        axial_index = self.view.axial_slider.value()
+        coronal_index = self.view.coronal_slider.value()
+        sagittal_index = self.view.sagittal_slider.value()
+
+        # Usamos un filtro claro: equalización de histograma
+        pix_axial, pix_coronal, pix_sagittal = self.model.apply_filter_to_slices(
+            "equalize", axial_index, coronal_index, sagittal_index
+        )
+
+        # Actualizar las 3 etiquetas de la vista
+        self.view.display_slice("axial", pix_axial)
+        self.view.display_slice("coronal", pix_coronal)
+        self.view.display_slice("sagittal", pix_sagittal)
+
+        return pix_axial
+
+
+
     def get_max_slices(self, plane):
         return self.model.get_max_slices(plane)
-    
 
 #La cuarta clase es SignalController
 class SignalController:

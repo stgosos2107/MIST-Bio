@@ -20,11 +20,27 @@ class LoginWindow(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
         uic.loadUi("Interfaz/login_window.ui", self)
+
         self.controller = None
 
         if hasattr(self, "error_label"):
             self.error_label.setText("")
             self.error_label.setVisible(False)
+
+        if hasattr(self, "login_button"):
+            self.login_button.clicked.connect(self._on_login_clicked)
+        elif hasattr(self, "btn_login"):
+            self.btn_login.clicked.connect(self._on_login_clicked)
+        elif hasattr(self, "pushButton_login"):
+            self.pushButton_login.clicked.connect(self._on_login_clicked)
+
+        if hasattr(self, "register_button"):
+            self.register_button.clicked.connect(self._on_register_clicked)
+        elif hasattr(self, "btn_register"):
+            self.btn_register.clicked.connect(self._on_register_clicked)
+        elif hasattr(self, "pushButton_register"):
+            self.pushButton_register.clicked.connect(self._on_register_clicked)
+
 
     def get_login_data(self):
         username = self.username_input.text().strip()
@@ -50,6 +66,7 @@ class LoginWindow(QDialog):
         self.show_error("")
         return username, password
 
+
     def show_error(self, message):
         if not hasattr(self, "error_label"):
             return
@@ -63,13 +80,12 @@ class LoginWindow(QDialog):
             self.confirm_password_input.clear()
         self.show_error("")
 
-    # --------- SLOTS AUTOCONECTADOS ---------
 
-    def on_login_button_clicked(self):
+    def _on_login_clicked(self):
         username, password = self.get_login_data()
 
         ok = True
-        if hasattr(self, "controller") and self.controller is not None:
+        if self.controller is not None and hasattr(self.controller, "handle_login"):
             ok = self.controller.handle_login(username, password)
 
         if ok:
@@ -78,15 +94,39 @@ class LoginWindow(QDialog):
         else:
             self.show_error("Usuario o contraseña incorrectos.")
 
-    def on_register_button_clicked(self):
+    def _on_register_clicked(self):
         data = self.get_register_data()
         if data is None:
             return
 
         username, password = data
-        if hasattr(self, "controller") and self.controller is not None:
-            if hasattr(self.controller, "handle_register"):
-                self.controller.handle_register(username, password)
+
+        ok = True
+        if self.controller is not None and hasattr(self.controller, "handle_register"):
+            ok = self.controller.handle_register(username, password)
+
+        if not ok:
+            self.show_error("No se pudo registrar. Es posible que el usuario ya exista.")
+            return
+
+        frame = None
+        try:
+            camera_dialog = CameraCaptureDialog(self)
+            frame = camera_dialog.capture_image()
+        except Exception:
+            frame = None
+
+        if frame is not None:
+            try:
+                import os
+                os.makedirs("temp", exist_ok=True)
+                ruta = os.path.join("temp", f"perfil_{username}.jpg")
+                cv2.imwrite(ruta, frame)
+            except Exception:
+                pass
+
+        self.clear_fields()
+        self.show_error("Usuario registrado. Ahora puedes iniciar sesión con tus datos.")
 
 
 class MainWindow(QMainWindow):
@@ -94,6 +134,9 @@ class MainWindow(QMainWindow):
         super().__init__(parent)
         uic.loadUi("Interfaz/main_window.ui", self)
         self.controller = None
+
+        if hasattr(self, "logout_button"):
+            self.logout_button.clicked.connect(self._on_logout_clicked)
 
     def set_tabs(self, image_widget, signal_widget, tabular_widget):
         self.tab_widget.clear()
@@ -107,10 +150,8 @@ class MainWindow(QMainWindow):
     def cambia_tab(self, tab_index):
         self.tab_widget.setCurrentIndex(tab_index)
 
-    # --------- SLOT AUTOCONECTADO ---------
-
-    def on_logout_button_clicked(self):
-        if hasattr(self, "controller") and self.controller is not None:
+    def _on_logout_clicked(self):
+        if self.controller is not None and hasattr(self.controller, "handle_logout"):
             self.controller.handle_logout()
         self.close()
 
@@ -119,16 +160,83 @@ class ImageWidget(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         uic.loadUi("Interfaz/image_widget.ui", self)
+
         self.controller = None
+
+        if hasattr(self, "load_button"):
+            self.load_button.clicked.connect(self._on_load_clicked)
+
+        if hasattr(self, "filter_button"):
+            self.filter_button.clicked.connect(self._on_filter_clicked)
+
+        if hasattr(self, "axial_slider"):
+            self.axial_slider.valueChanged.connect(
+                lambda value: self._on_slider_moved("axial", value)
+            )
+        if hasattr(self, "coronal_slider"):
+            self.coronal_slider.valueChanged.connect(
+                lambda value: self._on_slider_moved("coronal", value)
+            )
+        if hasattr(self, "sagittal_slider"):
+            self.sagittal_slider.valueChanged.connect(
+                lambda value: self._on_slider_moved("sagittal", value)
+            )
+
+
+    def set_controller(self, controller):
+        self.controller = controller
+
+    def _on_load_clicked(self):
+
+        if self.controller is None:
+            self.get_selected_file()
+            return
+
+        self.controller.handle_load_image()
+
+    def _on_filter_clicked(self):
+        """
+        Slot del botón 'Aplicar filtro'.
+        """
+        if self.controller is None:
+            return
+
+        pixmap = self.controller.handle_process()
+        if pixmap is None:
+            return
+
+        self.display_slice("axial", pixmap)
+
+    def _on_slider_moved(self, plane, value):
+        
+        if self.controller is None:
+            return
+        pixmap = self.controller.handle_slider_change(plane, value)
+        self.display_slice(plane, pixmap)
+
 
     def display_slice(self, plane, pixmap):
         plane = plane.lower()
+
         if plane == "axial":
-            self.axial_label.setPixmap(pixmap)
+            label = self.axial_label
         elif plane == "coronal":
-            self.coronal_label.setPixmap(pixmap)
+            label = self.coronal_label
         elif plane == "sagittal":
-            self.sagittal_label.setPixmap(pixmap)
+            label = self.sagittal_label
+        else:
+            return
+
+        if pixmap is None or pixmap.isNull():
+            label.clear()
+            return
+
+        scaled = pixmap.scaled(
+            label.size(),
+            Qt.KeepAspectRatio,
+            Qt.SmoothTransformation,
+        )
+        label.setPixmap(scaled)
 
     def set_slider_range(self, plane, max_value):
         plane = plane.lower()
@@ -144,54 +252,18 @@ class ImageWidget(QWidget):
         slider.setMaximum(max_value)
 
     def get_selected_file(self):
-        filename, _ = QFileDialog.getOpenFileName(
+        from PyQt5.QtWidgets import QFileDialog
+
+        folder = QFileDialog.getExistingDirectory(
             self,
-            "Seleccionar imagen médica",
+            "Seleccionar carpeta con serie DICOM",
             "",
-            "Imágenes médicas (*.dcm *.nii *.nii.gz);;Imágenes comunes (*.png *.jpg *.jpeg)",
+            QFileDialog.ShowDirsOnly | QFileDialog.DontResolveSymlinks,
         )
-        return filename or ""
+        return folder or ""
 
-    # --------- SLOTS AUTOCONECTADOS ---------
 
-    def on_load_button_clicked(self):
-        if not hasattr(self, "controller") or self.controller is None:
-            return
 
-        ok = self.controller.handle_load_image()
-        if not ok:
-            return
-
-        for plane in ("axial", "coronal", "sagittal"):
-            max_val = self.controller.get_max_slices(plane)
-            if max_val > 0:
-                self.set_slider_range(plane, max_val)
-                pix = self.controller.handle_slider_change(plane, 0)
-                if pix is not None:
-                    self.display_slice(plane, pix)
-
-    def on_process_button_clicked(self):
-        if not hasattr(self, "controller") or self.controller is None:
-            return
-        pix = self.controller.handle_process()
-        if pix is not None:
-            self.display_slice("axial", pix)
-
-    def on_axial_slider_valueChanged(self, value):
-        self._update_plane_slice("axial", value)
-
-    def on_coronal_slider_valueChanged(self, value):
-        self._update_plane_slice("coronal", value)
-
-    def on_sagittal_slider_valueChanged(self, value):
-        self._update_plane_slice("sagittal", value)
-
-    def _update_plane_slice(self, plane, value):
-        if not hasattr(self, "controller") or self.controller is None:
-            return
-        pix = self.controller.handle_slider_change(plane, value)
-        if pix is not None:
-            self.display_slice(plane, pix)
 
 
 class SignalWidget(QWidget):
@@ -199,6 +271,13 @@ class SignalWidget(QWidget):
         super().__init__(parent)
         uic.loadUi("Interfaz/signal_widget.ui", self)
         self.controller = None
+
+        if hasattr(self, "load_button"):
+            self.load_button.clicked.connect(self._on_load_clicked)
+        if hasattr(self, "plot_button"):
+            self.plot_button.clicked.connect(self._on_plot_clicked)
+        if hasattr(self, "std_button"):
+            self.std_button.clicked.connect(self._on_std_clicked)
 
     def get_selected_file(self):
         filename, _ = QFileDialog.getOpenFileName(
@@ -256,26 +335,31 @@ class SignalWidget(QWidget):
         rect = scene.itemsBoundingRect()
         view.fitInView(rect, Qt.KeepAspectRatio)
 
-    # --------- SLOTS AUTOCONECTADOS ---------
-
-    def on_load_button_clicked(self):
-        if not hasattr(self, "controller") or self.controller is None:
+    def _on_load_clicked(self):
+        if self.controller is None or not hasattr(self.controller, "handle_load_signal"):
             return
         self.controller.handle_load_signal()
 
-    def on_plot_button_clicked(self):
-        if not hasattr(self, "controller") or self.controller is None:
+    def _on_plot_clicked(self):
+        if self.controller is None or not hasattr(self.controller, "handle_plot_spectrum"):
             return
         fig = self.controller.handle_plot_spectrum()
         if fig is not None:
             self.display_plot("spectrum", fig)
 
-    def on_std_button_clicked(self):
-        if not hasattr(self, "controller") or self.controller is None:
+    def _on_std_clicked(self):
+        if self.controller is None or not hasattr(self.controller, "handle_std_dev"):
             return
-        std_value, fig = self.controller.handle_std_dev()
+        result = self.controller.handle_std_dev()
+        if isinstance(result, tuple) and len(result) == 2:
+            std_value, fig = result
+        else:
+            fig = result
+            std_value = None
         if fig is not None:
             self.display_plot("histogram", fig)
+        if std_value is not None and hasattr(self, "std_label"):
+            self.std_label.setText(f"Desviación estándar: {std_value:.4f}")
 
 
 class TabularWidget(QWidget):
@@ -284,12 +368,28 @@ class TabularWidget(QWidget):
         uic.loadUi("Interfaz/tabular_widget.ui", self)
 
         self.controller = None
+
         self.plot_views = []
         for name in ("plot_view1", "plot_view2", "plot_view3", "plot_view4"):
             if hasattr(self, name):
                 view = getattr(self, name)
                 if isinstance(view, QGraphicsView):
                     self.plot_views.append(view)
+
+        if hasattr(self, "load_csv_button"):
+            self.load_csv_button.clicked.connect(self._on_load_csv_clicked)
+        elif hasattr(self, "btn_load_csv"):
+            self.btn_load_csv.clicked.connect(self._on_load_csv_clicked)
+        elif hasattr(self, "pushButton_load_csv"):
+            self.pushButton_load_csv.clicked.connect(self._on_load_csv_clicked)
+
+        # Botón para graficar columnas
+        if hasattr(self, "plot_columns_button"):
+            self.plot_columns_button.clicked.connect(self._on_plot_columns_clicked)
+        elif hasattr(self, "btn_plot_columns"):
+            self.btn_plot_columns.clicked.connect(self._on_plot_columns_clicked)
+        elif hasattr(self, "pushButton_plot_columns"):
+            self.pushButton_plot_columns.clicked.connect(self._on_plot_columns_clicked)
 
     def get_selected_file(self):
         filename, _ = QFileDialog.getOpenFileName(
@@ -334,19 +434,21 @@ class TabularWidget(QWidget):
         scene.addPixmap(pixmap)
         return scene
 
-    # --------- SLOTS AUTOCONECTADOS ---------
 
-    def on_load_button_clicked(self):
-        if not hasattr(self, "controller") or self.controller is None:
+    def _on_load_csv_clicked(self):
+        if self.controller is None:
             return
         self.controller.handle_load_csv()
 
-    def on_plot_button_clicked(self):
-        if not hasattr(self, "controller") or self.controller is None:
+    def _on_plot_columns_clicked(self):
+        if self.controller is None:
             return
         figs = self.controller.handle_plot_columns()
-        for i, (col, fig) in enumerate(figs):
-            self.display_column_plot(i, fig)
+        if not figs:
+            return
+
+        for idx, (col, fig) in enumerate(figs):
+            self.display_column_plot(idx, fig)
 
 
 class CameraCaptureDialog(QDialog):

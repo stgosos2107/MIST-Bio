@@ -81,7 +81,7 @@ QGraphicsView {
       <number>10</number>
      </property>
      <item>
-      <widget class="QPushButton" name="load_button">
+      <widget class="QPushButton" name="load_csv_button">
        <property name="text">
         <string>Cargar datos</string>
        </property>
@@ -109,16 +109,13 @@ QGraphicsView {
      </item>
      <item>
       <widget class="QListWidget" name="column_list">
-       <property name="minimumWidth">
-        <number>160</number>
-       </property>
-       <property name="maximumWidth">
-        <number>220</number>
+       <property name="selectionMode">
+        <enum>QAbstractItemView::MultiSelection</enum>
        </property>
       </widget>
      </item>
      <item>
-      <widget class="QPushButton" name="plot_button">
+      <widget class="QPushButton" name="plot_columns_button">
        <property name="text">
         <string>Graficar columnas</string>
        </property>

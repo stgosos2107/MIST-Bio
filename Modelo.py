@@ -72,6 +72,29 @@ class AuthManager:
     def verify_credentials(self, username: str, password: str) -> bool:
         return self.users.get(username) == password
 
+    def register_user(self, username: str, password: str) -> bool:
+        username = (username or "").strip()
+        if not username or not password:
+            return False
+
+        if username in self.users:
+            return False
+
+        self.users[username] = password
+
+        if os.path.exists(self.xml_path):
+            tree = ET.parse(self.xml_path)
+            root = tree.getroot()
+        else:
+            os.makedirs(os.path.dirname(self.xml_path) or ".", exist_ok=True)
+            root = ET.Element("usuarios")
+            tree = ET.ElementTree(root)
+
+        ET.SubElement(root, "usuario", nombre=username, contrasena=password)
+        tree.write(self.xml_path)
+
+        return True
+
 
 class UserSession:
     def __init__(self, username: str):
@@ -115,67 +138,203 @@ class ImageProcessor:
         self.volume: Optional[np.ndarray] = None
         self.metadata: Dict[str, Any] = {}
         self.current_file: str = ""
-        self.file_type: str = "2d"  # "2d" o "3d"
+        self.file_type: str = "2d"          # "2d" o "3d"
+        # (row_spacing, col_spacing, slice_thickness)
+        self.spacing: Tuple[float, float, float] = (1.0, 1.0, 1.0)
+
+    # -------------------- CARGA DE IMÁGENES --------------------
 
     def load_image(self, path: str) -> bool:
+        """
+        Carga:
+        - Una serie DICOM desde una CARPETA (lo que tú quieres para la serie),
+        - Un archivo DICOM individual,
+        - Un NIfTI (.nii / .nii.gz),
+        - O una imagen 2D (png/jpg...).
+        """
         self.volume = None
         self.metadata = {}
         self.current_file = path
         self.file_type = "2d"
-
-        ext = os.path.splitext(path.lower())[1]
+        self.spacing = (1.0, 1.0, 1.0)
 
         try:
+            if os.path.isdir(path):
+                # Carpeta con una serie DICOM
+                return self._load_dicom_series(path)
+
+            ext = os.path.splitext(path.lower())[1]
+
             if ext == ".dcm":
-                if not HAVE_PYDICOM:
-                    raise RuntimeError("pydicom no disponible.")
-                ds = pydicom.dcmread(path)
-                arr = ds.pixel_array.astype(np.float32)
-
-                if hasattr(ds, "RescaleSlope") and hasattr(ds, "RescaleIntercept"):
-                    arr = arr * float(ds.RescaleSlope) + float(ds.RescaleIntercept)
-
-                self.volume = arr
-                self.file_type = "3d" if arr.ndim == 3 else "2d"
-                self.metadata = {
-                    "PatientName": str(ds.get("PatientName", "Anónimo")),
-                    "PatientID": str(ds.get("PatientID", "")),
-                    "StudyDate": str(ds.get("StudyDate", "")),
-                    "Modality": str(ds.get("Modality", "")),
-                }
-
+                return self._load_single_dicom(path)
             elif ext in (".nii", ".gz"):
-                if not HAVE_NIBABEL:
-                    raise RuntimeError("nibabel no disponible.")
-                img = nib.load(path)
-                arr = np.asanyarray(img.dataobj).astype(np.float32)
-                self.volume = arr
-                self.file_type = "3d" if arr.ndim == 3 else "2d"
-                self.metadata = {
-                    "Modality": "MRI",
-                    "PatientName": os.path.basename(path),
-                }
-
+                return self._load_nifti(path)
             else:
-                if not HAVE_CV2:
-                    raise RuntimeError("OpenCV no disponible.")
-                img = cv2.imread(path)
-                if img is None:
-                    return False
-                img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-                self.volume = img.astype(np.float32)
-                self.file_type = "2d"
-                self.metadata = {
-                    "Modality": "2D",
-                    "PatientName": os.path.basename(path),
-                }
-
-            self._save_metadata_csv()
-            return True
+                return self._load_2d_image(path)
 
         except Exception as e:
-            print(f"Error cargando imagen: {e}")
+            print(f"[ImageProcessor] Error cargando imagen: {e}")
             return False
+
+    def _load_dicom_series(self, folder: str) -> bool:
+        if not HAVE_PYDICOM:
+            raise RuntimeError("pydicom no disponible.")
+
+        files = [
+            os.path.join(folder, f)
+            for f in os.listdir(folder)
+            if f.lower().endswith(".dcm")
+        ]
+        if not files:
+            raise RuntimeError("No se encontraron archivos DICOM en la carpeta.")
+
+        datasets = []
+        for fp in files:
+            try:
+                ds = pydicom.dcmread(fp)
+                datasets.append(ds)
+            except Exception:
+                pass
+
+        if not datasets:
+            raise RuntimeError("No se pudieron leer archivos DICOM.")
+
+        def sort_key(ds):
+            z = None
+            if hasattr(ds, "ImagePositionPatient"):
+                try:
+                    z = float(ds.ImagePositionPatient[2])
+                except Exception:
+                    z = None
+            if z is None:
+                try:
+                    z = float(getattr(ds, "InstanceNumber", 0))
+                except Exception:
+                    z = 0.0
+            return z
+
+        datasets.sort(key=sort_key)
+
+        arrs = [ds.pixel_array.astype(np.float32) for ds in datasets]
+        vol = np.stack(arrs, axis=-1)  # (rows, cols, slices)
+
+        self.volume = vol
+        self.file_type = "3d"
+
+        first = datasets[0]
+
+        row_sp, col_sp = 1.0, 1.0
+        if hasattr(first, "PixelSpacing"):
+            try:
+                row_sp, col_sp = [float(x) for x in first.PixelSpacing]
+            except Exception:
+                pass
+
+        slice_th = 1.0
+        if hasattr(first, "SliceThickness"):
+            try:
+                slice_th = float(first.SliceThickness)
+            except Exception:
+                pass
+        elif hasattr(first, "SpacingBetweenSlices"):
+            try:
+                slice_th = float(first.SpacingBetweenSlices)
+            except Exception:
+                pass
+
+        self.spacing = (row_sp, col_sp, slice_th)
+
+        self.metadata = {
+            "PatientName": str(first.get("PatientName", "Anónimo")),
+            "PatientID": str(first.get("PatientID", "")),
+            "StudyDate": str(first.get("StudyDate", "")),
+            "Modality": str(first.get("Modality", "")),
+            "NumSlices": vol.shape[2],
+        }
+
+        self._save_metadata_csv()
+        return True
+
+    def _load_single_dicom(self, path: str) -> bool:
+        if not HAVE_PYDICOM:
+            raise RuntimeError("pydicom no disponible.")
+
+        ds = pydicom.dcmread(path)
+        arr = ds.pixel_array.astype(np.float32)
+        self.volume = arr
+        self.file_type = "3d" if arr.ndim == 3 else "2d"
+
+        row_sp, col_sp = 1.0, 1.0
+        if hasattr(ds, "PixelSpacing"):
+            try:
+                row_sp, col_sp = [float(x) for x in ds.PixelSpacing]
+            except Exception:
+                pass
+
+        slice_th = 1.0
+        if hasattr(ds, "SliceThickness"):
+            try:
+                slice_th = float(ds.SliceThickness)
+            except Exception:
+                pass
+        elif hasattr(ds, "SpacingBetweenSlices"):
+            try:
+                slice_th = float(ds.SpacingBetweenSlices)
+            except Exception:
+                pass
+
+        self.spacing = (row_sp, col_sp, slice_th)
+
+        self.metadata = {
+            "PatientName": str(ds.get("PatientName", "Anónimo")),
+            "PatientID": str(ds.get("PatientID", "")),
+            "StudyDate": str(ds.get("StudyDate", "")),
+            "Modality": str(ds.get("Modality", "")),
+            "NumSlices": arr.shape[2] if arr.ndim == 3 else 1,
+        }
+
+        self._save_metadata_csv()
+        return True
+
+    def _load_nifti(self, path: str) -> bool:
+        if not HAVE_NIBABEL:
+            raise RuntimeError("nibabel no disponible.")
+
+        img = nib.load(path)
+        arr = np.asanyarray(img.dataobj).astype(np.float32)
+        self.volume = arr
+        self.file_type = "3d" if arr.ndim == 3 else "2d"
+
+        try:
+            zooms = img.header.get_zooms()
+            if len(zooms) >= 3:
+                self.spacing = (float(zooms[0]), float(zooms[1]), float(zooms[2]))
+        except Exception:
+            self.spacing = (1.0, 1.0, 1.0)
+
+        self.metadata = {
+            "Modality": "MRI",
+            "PatientName": os.path.basename(path),
+        }
+        self._save_metadata_csv()
+        return True
+
+    def _load_2d_image(self, path: str) -> bool:
+        if not HAVE_CV2:
+            raise RuntimeError("OpenCV no disponible.")
+        img = cv2.imread(path)
+        if img is None:
+            return False
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        self.volume = img.astype(np.float32)
+        self.file_type = "2d"
+        self.spacing = (1.0, 1.0, 1.0)
+        self.metadata = {
+            "Modality": "2D",
+            "PatientName": os.path.basename(path),
+        }
+        self._save_metadata_csv()
+        return True
 
     def _save_metadata_csv(self):
         if not self.metadata:
@@ -186,39 +345,88 @@ class ImageProcessor:
         csv_path = os.path.join("resultados", f"metadata_{base}.csv")
         df.to_csv(csv_path, index=False)
 
+    # -------------------- OBTENER CORTES --------------------
+
     def get_slice(self, plane: str, index: int) -> QPixmap:
         if self.volume is None or not HAVE_PYQT:
             return QPixmap()
 
-        if self.file_type == "2d":
-            img = self.volume
+        vol = self.volume
+        plane = plane.lower()
+
+        # Elegir el array 2D
+        if vol.ndim == 2 or self.file_type == "2d":
+            arr = vol
         else:
             if plane == "axial":
-                img = self.volume[:, :, index] if self.volume.ndim == 3 else self.volume[index]
+                index = max(0, min(index, vol.shape[2] - 1))
+                arr = vol[:, :, index]
             elif plane == "coronal":
-                img = self.volume[:, index, :]
+                index = max(0, min(index, vol.shape[1] - 1))
+                arr = vol[:, index, :]
             elif plane == "sagittal":
-                img = self.volume[index, :, :]
+                index = max(0, min(index, vol.shape[0] - 1))
+                arr = vol[index, :, :]
             else:
-                return QPixmap()
+                index = max(0, min(index, vol.shape[2] - 1))
+                arr = vol[:, :, index]
 
-        img = np.array(img, dtype=np.float32)
-        img = np.clip(img, np.percentile(img, 1), np.percentile(img, 99))
-        img = (img - img.min()) / (img.max() - img.min() + 1e-8)
-        img = (img * 255).astype(np.uint8)
+        arr = np.array(arr, dtype=np.float32)
 
+        # Ventana de intensidades
+        lo = np.percentile(arr, 1)
+        hi = np.percentile(arr, 99)
+        arr = np.clip(arr, lo, hi)
+        arr = (arr - arr.min()) / (arr.max() - arr.min() + 1e-8)
+        img = (arr * 255).astype(np.uint8)
+
+        # Corrección de aspecto y orientación para coronal/sagittal 3D
+        if self.file_type == "3d" and vol.ndim == 3 and plane in ("coronal", "sagittal"):
+            row_sp, col_sp, slice_th = self.spacing
+            row_sp = row_sp or 1.0
+            col_sp = col_sp or 1.0
+            slice_th = slice_th or 1.0
+
+            # Para coronal uso spacing de filas, para sagital el de columnas
+            base_spacing = row_sp if plane == "coronal" else col_sp
+
+            # Factor físico: qué tanto más “gordo” debería ser el eje de los cortes
+            phys_factor = slice_th / base_spacing if base_spacing > 0 else 1.0
+            # Lo usamos casi tal cual, solo limitado para que no se vuelva loco
+            factor = max(1.0, min(4.0, phys_factor))
+
+            # Ensanchar la imagen (hacerla menos aplastada)
+            if HAVE_CV2 and img.ndim == 2:
+                h, w = img.shape
+                new_w = max(1, int(round(w * factor)))
+                interp = cv2.INTER_CUBIC if new_w > w else cv2.INTER_AREA
+                img = cv2.resize(img, (new_w, h), interpolation=interp)
+
+            # Girar 90° (en el mismo sentido en que antes se veía bien)
+            img = np.rot90(img, 1)
+
+
+        # Pasar a QImage/QPixmap
         if img.ndim == 2:
             h, w = img.shape
-            qimg = QImage(img.data, w, h, w, QImage.Format_Grayscale8)
+            bytes_per_line = w
+            buffer = img.tobytes()
+            qimg = QImage(buffer, w, h, bytes_per_line, QImage.Format_Grayscale8)
         else:
-            h, w, _ = img.shape
-            qimg = QImage(img.data, w, h, w * 3, QImage.Format_RGB888)
+            h, w, c = img.shape
+            if c != 3:
+                img = np.repeat(img[:, :, None], 3, axis=2)
+                h, w, c = img.shape
+            bytes_per_line = w * c
+            buffer = img.tobytes()
+            qimg = QImage(buffer, w, h, bytes_per_line, QImage.Format_RGB888)
 
-        return QPixmap.fromImage(qimg)
+        return QPixmap.fromImage(qimg.copy())
 
     def get_max_slices(self, plane: str) -> int:
-        if self.volume is None or self.file_type == "2d":
+        if self.volume is None or self.file_type == "2d" or self.volume.ndim != 3:
             return 0
+        plane = plane.lower()
         if plane == "axial":
             return self.volume.shape[2] - 1
         elif plane == "coronal":
@@ -227,8 +435,80 @@ class ImageProcessor:
             return self.volume.shape[0] - 1
         return 0
 
-    
+    # -------------------- FILTROS PARA LAS 3 VISTAS --------------------
+
+    def apply_filter_to_slices(
+        self,
+        filter_type: str,
+        axial_index: int,
+        coronal_index: int,
+        sagittal_index: int,
+    ):
+        """
+        Aplica un filtro a los 3 planos visibles (axial, coronal, sagital)
+        y devuelve 3 QPixmap filtrados.
+        """
+        if self.volume is None or not HAVE_PYQT:
+            return QPixmap(), QPixmap(), QPixmap()
+
+        pix_axial = self.get_slice("axial", axial_index)
+        pix_coronal = self.get_slice("coronal", coronal_index)
+        pix_sagittal = self.get_slice("sagittal", sagittal_index)
+
+        def pix_to_array(pix: QPixmap) -> Optional[np.ndarray]:
+            if pix.isNull():
+                return None
+            qimg = pix.toImage().convertToFormat(QImage.Format_Grayscale8)
+            w = qimg.width()
+            h = qimg.height()
+            bits = qimg.bits()
+            bits.setsize(h * w)
+            arr = np.frombuffer(bits, dtype=np.uint8).reshape((h, w))
+            return arr
+
+        def array_to_pix(arr: np.ndarray) -> QPixmap:
+            h, w = arr.shape
+            buffer = arr.tobytes()
+            qimg = QImage(buffer, w, h, w, QImage.Format_Grayscale8)
+            return QPixmap.fromImage(qimg.copy())
+
+        def filter_array(gray: np.ndarray) -> np.ndarray:
+            if not HAVE_CV2:
+                return gray
+            f = filter_type.lower()
+            img = gray.copy()
+            if f == "gaussian":
+                img = cv2.GaussianBlur(img, (5, 5), 0)
+            elif f == "binarizacion":
+                _, img = cv2.threshold(img, 0, 255, cv2.THRESH_OTSU)
+            elif f == "canny":
+                img = cv2.Canny(img, 100, 200)
+            elif f == "equalize":
+                img = cv2.equalizeHist(img)
+            # "grayscale" o "default": sin cambios fuertes
+            return img
+
+        arr_axial = pix_to_array(pix_axial)
+        arr_coronal = pix_to_array(pix_coronal)
+        arr_sagittal = pix_to_array(pix_sagittal)
+
+        arr_axial_f = filter_array(arr_axial) if arr_axial is not None else None
+        arr_coronal_f = filter_array(arr_coronal) if arr_coronal is not None else None
+        arr_sagittal_f = filter_array(arr_sagittal) if arr_sagittal is not None else None
+
+        pix_axial_f = array_to_pix(arr_axial_f) if arr_axial_f is not None else pix_axial
+        pix_coronal_f = array_to_pix(arr_coronal_f) if arr_coronal_f is not None else pix_coronal
+        pix_sagittal_f = array_to_pix(arr_sagittal_f) if arr_sagittal_f is not None else pix_sagittal
+
+        return pix_axial_f, pix_coronal_f, pix_sagittal_f
+
+    # -------------------- CÁMARA (se deja igual) --------------------
+
     def apply_filter(self, filter_type: str, image_2d: Optional[np.ndarray] = None) -> QPixmap:
+        """
+        Versión usada por el módulo de cámara para aplicar un filtro
+        a una sola imagen 2D.
+        """
         if not HAVE_CV2 or not HAVE_PYQT:
             return QPixmap()
 
@@ -248,19 +528,19 @@ class ImageProcessor:
 
         gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY) if img.ndim == 3 else img
 
-        if filter_type == "gaussian":
+        f = filter_type.lower()
+        if f == "gaussian":
             gray = cv2.GaussianBlur(gray, (5, 5), 0)
-        elif filter_type == "binarizacion":
+        elif f == "binarizacion":
             _, gray = cv2.threshold(gray, 0, 255, cv2.THRESH_OTSU)
-        elif filter_type == "canny":
+        elif f == "canny":
             gray = cv2.Canny(gray, 100, 200)
-        elif filter_type == "equalize":
+        elif f == "equalize":
             gray = cv2.equalizeHist(gray)
-        # "grayscale" o "default": solo se deja en gris
 
         h, w = gray.shape
         qimg = QImage(gray.data, w, h, w, QImage.Format_Grayscale8)
-        return QPixmap.fromImage(qimg)
+        return QPixmap.fromImage(qimg.copy())
 
     def convert_to_grayscale_and_save(self, frame: np.ndarray, session: UserSession) -> str:
         if not HAVE_CV2:

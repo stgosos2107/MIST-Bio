@@ -140,7 +140,7 @@ QPushButton:pressed {
       </spacer>
      </item>
      <item>
-      <widget class="QPushButton" name="load_image">
+      <widget class="QPushButton" name="load_button">
        <property name="text">
         <string>Cargar imagen</string>
        </property>
