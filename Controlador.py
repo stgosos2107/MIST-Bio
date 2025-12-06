@@ -78,11 +78,8 @@ class ImageController:
     def handle_slider_change(self, plane, value):
         return self.model.get_slice(plane, value)
 
+#este método aplica un filtro a las 3 vistas y actualiza las etiquetas
     def handle_process(self):
-        """
-        Aplica el filtro a las 3 vistas (axial, coronal y sagital)
-        usando los índices actuales de los sliders.
-        """
         axial_index = self.view.axial_slider.value()
         coronal_index = self.view.coronal_slider.value()
         sagittal_index = self.view.sagittal_slider.value()
