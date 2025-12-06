@@ -1,3 +1,4 @@
+#Este archivo contiene las clases de la vista (UI) de la aplicación usando PyQt5.
 from PyQt5 import uic
 from PyQt5.QtWidgets import (
     QMainWindow,
@@ -16,7 +17,12 @@ from matplotlib.figure import Figure
 import cv2
 
 
+#Clases de la vista 
+
+#La primera clase es LoginWindow y maneja la ventana de login y registro de usuarios
 class LoginWindow(QDialog):
+#Carga el archivo .ui, configura la interfaz y conecta los botones de login y registro con 
+# sus funciones internas.
     def __init__(self, parent=None):
         super().__init__(parent)
         uic.loadUi("Interfaz/login_window.ui", self)
@@ -41,15 +47,18 @@ class LoginWindow(QDialog):
         elif hasattr(self, "pushButton_register"):
             self.pushButton_register.clicked.connect(self._on_register_clicked)
 
-
+#metodo que obtiene el usuario y la contraseña escritos en los campos del login.
     def get_login_data(self):
         username = self.username_input.text().strip()
         password = self.password_input.text()
         return username, password
 
+#Método alterno para obtener usuario y contraseña (llama a get_login_data())
     def get_credentials(self):
         return self.get_login_data()
 
+#Obtiene usuario, contraseña y confirmación de contraseña;
+#Verifica que los campos estén completos y que las contraseñas coincidan.
     def get_register_data(self):
         username = self.username_input.text().strip()
         password = self.password_input.text()
@@ -66,13 +75,14 @@ class LoginWindow(QDialog):
         self.show_error("")
         return username, password
 
-
+#Este método muestra un mensaje de error en la etiqueta correspondiente
     def show_error(self, message):
         if not hasattr(self, "error_label"):
             return
         self.error_label.setText(message)
         self.error_label.setVisible(bool(message))
 
+#Este método limpia los campos de entrada y el mensaje de error
     def clear_fields(self):
         self.username_input.clear()
         self.password_input.clear()
@@ -80,7 +90,8 @@ class LoginWindow(QDialog):
             self.confirm_password_input.clear()
         self.show_error("")
 
-
+#Se ejecuta cuando el usuario hace clic en “Iniciar sesión”;
+#Llama al controlador para verificar credenciales y actúa según la respuesta.
     def _on_login_clicked(self):
         username, password = self.get_login_data()
 
@@ -94,6 +105,9 @@ class LoginWindow(QDialog):
         else:
             self.show_error("Usuario o contraseña incorrectos.")
 
+
+#Este método se ejecuta cuando el usuario hace clic en “Iniciar sesión”;
+#Llama al controlador para verificar credenciales y actúa según la respuesta.
     def _on_register_clicked(self):
         data = self.get_register_data()
         if data is None:
@@ -130,6 +144,7 @@ class LoginWindow(QDialog):
 
 
 class MainWindow(QMainWindow):
+#Carga la interfaz principal del programa y conecta el botón de cerrar sesión.
     def __init__(self, parent=None):
         super().__init__(parent)
         uic.loadUi("Interfaz/main_window.ui", self)
@@ -138,25 +153,32 @@ class MainWindow(QMainWindow):
         if hasattr(self, "logout_button"):
             self.logout_button.clicked.connect(self._on_logout_clicked)
 
+#Configura las tres pestañas principales de la aplicación:
+#Imágenes, Señales y Datos Tabulares.
     def set_tabs(self, image_widget, signal_widget, tabular_widget):
         self.tab_widget.clear()
         self.tab_widget.addTab(image_widget, "Imágenes")
         self.tab_widget.addTab(signal_widget, "Señales")
         self.tab_widget.addTab(tabular_widget, "Datos tabulares")
 
+#Muestra un mensaje temporal en la barra de estado.
     def update_status(self, msg, timeout_ms=5000):
         self.status_bar.showMessage(msg, timeout_ms)
 
+#Cambia la pestaña seleccionada según el índice recibido
     def cambia_tab(self, tab_index):
         self.tab_widget.setCurrentIndex(tab_index)
 
+#Este método ejecuta el logout llamando al controlador y luego cierra la ventana.
     def _on_logout_clicked(self):
         if self.controller is not None and hasattr(self.controller, "handle_logout"):
             self.controller.handle_logout()
         self.close()
 
 
+#Esta clase maneja la vista para el procesamiento de imágenes médicas
 class ImageWidget(QWidget):
+
     def __init__(self, parent=None):
         super().__init__(parent)
         uic.loadUi("Interfaz/image_widget.ui", self)
@@ -182,10 +204,12 @@ class ImageWidget(QWidget):
                 lambda value: self._on_slider_moved("sagittal", value)
             )
 
-
+#Permite asignar el controlador correspondiente a este widget
     def set_controller(self, controller):
         self.controller = controller
 
+#Este método se ejecuta al presionar “Cargar imagen”;
+#Llama al método del controlador que carga la imagen seleccionada
     def _on_load_clicked(self):
 
         if self.controller is None:
@@ -194,10 +218,10 @@ class ImageWidget(QWidget):
 
         self.controller.handle_load_image()
 
+#Ejecuta la acción de aplicar un filtro a la imagen.
+#Pide al controlador el resultado filtrado y lo muestra
     def _on_filter_clicked(self):
-        """
-        Slot del botón 'Aplicar filtro'.
-        """
+
         if self.controller is None:
             return
 
@@ -207,6 +231,8 @@ class ImageWidget(QWidget):
 
         self.display_slice("axial", pixmap)
 
+#Metodo que se ejecuta cuando un slider cambia;
+#Pide el corte correspondiente (axial, coronal o sagital) al controlador.
     def _on_slider_moved(self, plane, value):
         
         if self.controller is None:
@@ -214,7 +240,7 @@ class ImageWidget(QWidget):
         pixmap = self.controller.handle_slider_change(plane, value)
         self.display_slice(plane, pixmap)
 
-
+#Muestra en pantalla la imagen recibida dentro del label correcto.
     def display_slice(self, plane, pixmap):
         plane = plane.lower()
 
@@ -238,6 +264,7 @@ class ImageWidget(QWidget):
         )
         label.setPixmap(scaled)
 
+#Configura el rango del slider según la cantidad de cortes disponibles en el volumen
     def set_slider_range(self, plane, max_value):
         plane = plane.lower()
         if plane == "axial":
@@ -251,6 +278,7 @@ class ImageWidget(QWidget):
         slider.setMinimum(0)
         slider.setMaximum(max_value)
 
+#Abre un diálogo para seleccionar una carpeta con una serie DICOM
     def get_selected_file(self):
         from PyQt5.QtWidgets import QFileDialog
 
@@ -265,8 +293,10 @@ class ImageWidget(QWidget):
 
 
 
-
+#Esta clase maneja la vista para el procesamiento de señales
 class SignalWidget(QWidget):
+#Carga la interfaz signal_widget.ui, inicializa el controlador y conecta 
+# los botones (cargar señal, graficar espectro y calcular desviación estándar) con sus métodos correspondientes
     def __init__(self, parent=None):
         super().__init__(parent)
         uic.loadUi("Interfaz/signal_widget.ui", self)
@@ -279,6 +309,8 @@ class SignalWidget(QWidget):
         if hasattr(self, "std_button"):
             self.std_button.clicked.connect(self._on_std_clicked)
 
+#metodo que abre un cuadro de diálogo para que el usuario seleccione un archivo de señal.
+#Permite .csv, .txt y .mat.
     def get_selected_file(self):
         filename, _ = QFileDialog.getOpenFileName(
             self,
@@ -288,12 +320,16 @@ class SignalWidget(QWidget):
         )
         return filename or ""
 
+#Devuelve el nombre del canal seleccionado en el combo box.
     def get_selected_channel(self):
         return self.channel_combo.currentText()
 
+#Devuelve el índice del canal seleccionado en el combo box
     def get_selected_channel_index(self):
         return self.channel_combo.currentIndex()
 
+#Llena la tabla (QTableWidget) con los resultados del análisis FFT.
+#Inserta los valores fila por fila y ajusta el tamaño de las columnas
     def populate_table(self, data):
         self.fft_table.clear()
         self.fft_table.setRowCount(len(data.index))
@@ -307,6 +343,8 @@ class SignalWidget(QWidget):
 
         self.fft_table.resizeColumnsToContents()
 
+#Convierte una figura de Matplotlib en una escena (QGraphicsScene) 
+# para poder mostrarla en un QGraphicsView.
     def _figure_to_scene(self, figure):
         from matplotlib.backends.backend_agg import FigureCanvasAgg
 
@@ -321,6 +359,7 @@ class SignalWidget(QWidget):
         scene.addPixmap(pixmap)
         return scene
 
+#Muestra un gráfico en el área correspondiente (histograma o espectro)
     def display_plot(self, view_type, figure):
         scene = self._figure_to_scene(figure)
 
@@ -335,11 +374,13 @@ class SignalWidget(QWidget):
         rect = scene.itemsBoundingRect()
         view.fitInView(rect, Qt.KeepAspectRatio)
 
+#método que llama al controlador para cargar la señal seleccionada
     def _on_load_clicked(self):
         if self.controller is None or not hasattr(self.controller, "handle_load_signal"):
             return
         self.controller.handle_load_signal()
 
+#Solicita al controlador el espectro de la señal (FFT) y lo muestra en pantalla
     def _on_plot_clicked(self):
         if self.controller is None or not hasattr(self.controller, "handle_plot_spectrum"):
             return
@@ -347,6 +388,8 @@ class SignalWidget(QWidget):
         if fig is not None:
             self.display_plot("spectrum", fig)
 
+#metodo que Solicita al controlador el cálculo de desviación estándar y su histograma.
+#Muestra la gráfica y el valor numérico en la interfaz.
     def _on_std_clicked(self):
         if self.controller is None or not hasattr(self.controller, "handle_std_dev"):
             return
@@ -361,7 +404,7 @@ class SignalWidget(QWidget):
         if std_value is not None and hasattr(self, "std_label"):
             self.std_label.setText(f"Desviación estándar: {std_value:.4f}")
 
-
+#Esta clase maneja la vista para el procesamiento de datos tabulares
 class TabularWidget(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -391,6 +434,7 @@ class TabularWidget(QWidget):
         elif hasattr(self, "pushButton_plot_columns"):
             self.pushButton_plot_columns.clicked.connect(self._on_plot_columns_clicked)
 
+#Permite seleccionar un archivo de datos (CSV o Excel) desde el explorador
     def get_selected_file(self):
         filename, _ = QFileDialog.getOpenFileName(
             self,
@@ -400,16 +444,20 @@ class TabularWidget(QWidget):
         )
         return filename or ""
 
+#Carga el modelo de datos (QStandardItemModel o similar) dentro del QTableView
     def load_data_model(self, model):
         self.data_table.setModel(model)
 
+#Llena la lista de columnas disponibles para seleccionar antes de graficar
     def set_column_names(self, columns):
         self.column_list.clear()
         self.column_list.addItems(columns)
 
+#Retorna una lista con los nombres de las columnas seleccionadas por el usuario
     def get_selected_columns(self):
         return [item.text() for item in self.column_list.selectedItems()]
 
+#Muestra un gráfico en uno de los QGraphicsView disponibles según su posición
     def display_column_plot(self, index, figure):
         if index < 0 or index >= len(self.plot_views):
             return
@@ -420,6 +468,8 @@ class TabularWidget(QWidget):
         rect = scene.itemsBoundingRect()
         view.fitInView(rect, Qt.KeepAspectRatio)
 
+#Convierte una figura de Matplotlib en una escena (QGraphicsScene) 
+# para ser mostrada en las vistas de gráficos.
     def _figure_to_scene(self, figure):
         from matplotlib.backends.backend_agg import FigureCanvasAgg
 
@@ -434,12 +484,14 @@ class TabularWidget(QWidget):
         scene.addPixmap(pixmap)
         return scene
 
-
+#método que pide al controlador que cargue el archivo CSV o Excel seleccionado
     def _on_load_csv_clicked(self):
         if self.controller is None:
             return
         self.controller.handle_load_csv()
 
+#Pide al controlador los gráficos de las columnas seleccionadas
+#  y los muestra en los distintos espacios de graficación.
     def _on_plot_columns_clicked(self):
         if self.controller is None:
             return
@@ -451,6 +503,7 @@ class TabularWidget(QWidget):
             self.display_column_plot(idx, fig)
 
 
+#Esta clase maneja el diálogo para capturar imágenes desde la cámara web
 class CameraCaptureDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -467,6 +520,8 @@ class CameraCaptureDialog(QDialog):
         if hasattr(self, "cancel_button"):
             self.cancel_button.clicked.connect(self.reject)
 
+#Toma un frame de la cámara y lo convierte a un QPixmap 
+# para mostrarlo en el label de previsualización.
     def update_preview(self):
         if self.video_capture is None or not self.video_capture.isOpened():
             return
@@ -491,6 +546,8 @@ class CameraCaptureDialog(QDialog):
                 )
             )
 
+#Abre la cámara, inicia el temporizador, muestra el diálogo y espera a que el usuario presione Aceptar.
+#Devuelve la imagen capturada (frame) si se aceptó.
     def capture_image(self):
         self.video_capture = cv2.VideoCapture(0, cv2.CAP_DSHOW)
         if not self.video_capture.isOpened():
@@ -506,6 +563,8 @@ class CameraCaptureDialog(QDialog):
         self._release_camera()
         return result
 
+#Usamos este metodo para detener el temporizador y liberar la cámara
+# para evitar que quede bloqueada en segundo plano
     def _release_camera(self):
         if self.timer.isActive():
             self.timer.stop()
@@ -513,6 +572,7 @@ class CameraCaptureDialog(QDialog):
             self.video_capture.release()
         self.video_capture = None
 
+#Se ejecuta cuando la ventana se cierra; asegura que la cámara sea liberada correctamente
     def closeEvent(self, event):
         self._release_camera()
         super().closeEvent(event)
