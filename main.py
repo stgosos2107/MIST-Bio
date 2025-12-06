@@ -1,6 +1,6 @@
-from vista import *
-from modelo import *
-from controlador import *
+from Vista import *
+from Modelo import *
+from Controlador import *
 import sys
 from PyQt5.QtWidgets import QApplication
 
