@@ -1,3 +1,8 @@
+# MIST-Bio
+# Mariana Ardila Alvarez
+# Sofia Henao Osorio
+# Valeria Salazar Ibarguen
+# Santiago Osorio Salazar
 #Este archivo contiene las clases de la vista (UI) de la aplicación usando PyQt5.
 from PyQt5 import uic
 from PyQt5.QtWidgets import (
