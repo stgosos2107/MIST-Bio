@@ -1,3 +1,8 @@
+# MIST-Bio
+# Mariana Ardila Alvarez
+# Sofia Henao Osorio
+# Valeria Salazar Ibarguen
+# Santiago Osorio Salazar
 #Este .py contiene las clases del modelo para manejar datos y lógica del aplicativo MIST-Bio.
 
 #Importaciones necesarias 

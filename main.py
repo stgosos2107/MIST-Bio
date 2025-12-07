@@ -1,3 +1,8 @@
+# MIST-Bio
+# Mariana Ardila Alvarez
+# Sofia Henao Osorio
+# Valeria Salazar Ibarguen
+# Santiago Osorio Salazar
 import sys
 from PyQt5.QtWidgets import QApplication, QDialog
 

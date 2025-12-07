@@ -1,3 +1,8 @@
+# MIST-Bio
+# Mariana Ardila Alvarez
+# Sofia Henao Osorio
+# Valeria Salazar Ibarguen
+# Santiago Osorio Salazar
 #Este archivo .py contiene la lógica del controlador para manejar las interacciones entre el modelo y 
 # la vista en nuestro aplicativo MIST-Bio.
 
